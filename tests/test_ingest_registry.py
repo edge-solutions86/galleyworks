@@ -30,7 +30,7 @@ class StubReader:
 
 
 def test_default_registry_has_the_fallback() -> None:
-    assert default_registry().names == ["plaintext"]
+    assert default_registry().names == ["enrolled", "plaintext"]
 
 
 def test_duplicate_names_are_rejected() -> None:
@@ -48,8 +48,8 @@ def test_get_finds_a_reader_by_name() -> None:
 def test_get_reports_the_known_names() -> None:
     registry = default_registry()
     with pytest.raises(UnknownFormatError, match="no reader with this name") as caught:
-        registry.get("enrolled")
-    assert caught.value.context["known"] == "plaintext"
+        registry.get("nonesuch")
+    assert caught.value.context["known"] == "enrolled,plaintext"
 
 
 def test_detect_picks_the_highest_score() -> None:
@@ -83,7 +83,9 @@ def test_detect_refuses_scores_below_the_floor() -> None:
 
 
 def test_single_reader_has_no_runner_up() -> None:
-    assert default_registry().detect(doc()).runner_up is None
+    registry = ReaderRegistry()
+    registry.register(PlaintextReader())
+    assert registry.detect(doc()).runner_up is None
 
 
 def test_read_uses_the_detected_reader() -> None:
@@ -106,7 +108,7 @@ def test_read_can_pin_a_reader() -> None:
 
 def test_pinning_an_unknown_reader_is_an_error() -> None:
     with pytest.raises(UnknownFormatError):
-        default_registry().read(doc(), format_name="enrolled")
+        default_registry().read(doc(), format_name="nonesuch")
 
 
 def test_read_returns_a_parsed_instrument() -> None:

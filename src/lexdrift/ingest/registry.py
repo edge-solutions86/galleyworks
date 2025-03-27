@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from lexdrift.errors import IngestError, UnknownFormatError
 from lexdrift.ingest.base import Reader, SourceDocument
+from lexdrift.ingest.enrolled import EnrolledReader
 from lexdrift.ingest.plaintext import PlaintextReader
 from lexdrift.models import Instrument
 from lexdrift.util.logging import get_logger
@@ -101,5 +102,6 @@ def default_registry() -> ReaderRegistry:
     """The registry the CLI and the service use."""
 
     registry = ReaderRegistry()
+    registry.register(EnrolledReader())
     registry.register(PlaintextReader())
     return registry
