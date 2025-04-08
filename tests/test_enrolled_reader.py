@@ -4,7 +4,8 @@ import pytest
 
 from lexdrift.errors import ParseError
 from lexdrift.ingest.base import SourceDocument
-from lexdrift.ingest.enrolled import EnrolledReader, split_sections
+from lexdrift.ingest.blocks import split_sections
+from lexdrift.ingest.enrolled import EnrolledReader
 from lexdrift.ingest.enrolled_lex import lex_lines
 from lexdrift.ingest.plaintext import PlaintextReader
 from lexdrift.models import SegmentKind
@@ -50,16 +51,38 @@ def test_split_sections_on_text_with_none() -> None:
     assert split_sections("nothing here\n", lex_lines("nothing here\n")) == []
 
 
-def test_read_builds_title_enacting_and_sections(water_bill: SourceDocument) -> None:
+def test_read_builds_the_whole_tree(water_bill: SourceDocument) -> None:
     instrument = EnrolledReader().read(water_bill)
     kinds = [segment.kind for segment in instrument.segments]
     assert kinds == [
         SegmentKind.TITLE,
         SegmentKind.ENACTING,
         SegmentKind.SECTION,
+        SegmentKind.SUBSECTION,
+        SegmentKind.PARAGRAPH,
+        SegmentKind.PARAGRAPH,
+        SegmentKind.SUBSECTION,
         SegmentKind.SECTION,
     ]
     assert instrument.source_format == "enrolled"
+
+
+def test_read_indexes_segments_consecutively(water_bill: SourceDocument) -> None:
+    instrument = EnrolledReader().read(water_bill)
+    assert [s.index for s in instrument.segments] == list(range(len(instrument.segments)))
+
+
+def test_read_links_children_to_their_section(water_bill: SourceDocument) -> None:
+    instrument = EnrolledReader().read(water_bill)
+    sections = [s for s in instrument.segments if s.kind is SegmentKind.SECTION]
+    first = sections[0]
+    assert [c.path.printed for c in instrument.children_of(first.index)] == ["1(a)", "1(b)"]
+
+
+def test_read_gives_every_segment_a_path(water_bill: SourceDocument) -> None:
+    instrument = EnrolledReader().read(water_bill)
+    paths = [s.path.printed for s in instrument.segments if s.path.depth]
+    assert paths == ["1", "1(a)", "1(a)(i)", "1(a)(ii)", "1(b)", "2"]
 
 
 def test_body_segments_exclude_the_enacting_clause(water_bill: SourceDocument) -> None:

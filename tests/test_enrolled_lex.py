@@ -124,3 +124,17 @@ def test_has_label_covers_the_structural_kinds() -> None:
 def test_empty_text_gives_one_blank_line() -> None:
     assert kinds("") == []
     assert len(lex_lines("")) == 1
+
+
+def test_a_wrapped_line_is_not_a_label() -> None:
+    text = "(a)  not later than sixty\n(60) days after the close.\n"
+    assert kinds(text) == [LineKind.SUBSECTION, LineKind.TEXT]
+
+
+def test_a_label_after_a_blank_line_is_a_label() -> None:
+    text = "(a)  lead in\n\n(1)  an item.\n"
+    assert kinds(text) == [LineKind.SUBSECTION, LineKind.ITEM]
+
+
+def test_the_first_line_can_be_a_label() -> None:
+    assert kinds("(a)  first thing.\n") == [LineKind.SUBSECTION]

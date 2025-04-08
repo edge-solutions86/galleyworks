@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from lexdrift.ingest.enrolled import split_sections
+from lexdrift.ingest.blocks import split_sections
 from lexdrift.ingest.enrolled_lex import lex_lines
 from lexdrift.ingest.structure import nest_section
 from lexdrift.models import Segment, SegmentKind, SegmentPath

@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lexdrift.errors import ParseError
-from lexdrift.ingest.enrolled import SectionBlock
+from lexdrift.ingest.blocks import SectionBlock
 from lexdrift.ingest.enrolled_lex import LexLine, LineKind
 from lexdrift.ingest.labels import alpha_successor, roman_successor
 from lexdrift.models import Segment, SegmentKind, SegmentPath

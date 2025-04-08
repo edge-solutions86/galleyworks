@@ -95,10 +95,16 @@ def _classify_label(label: str) -> LineKind:
 
 
 def lex_lines(text: str) -> list[LexLine]:
-    """Classify every line of ``text``, keeping spans into the original."""
+    """Classify every line of ``text``, keeping spans into the original.
+
+    A parenthesised label only counts when it opens a block, that is, at the top
+    of the document or after a blank line. Enrolled text wraps at the margin, so
+    ``sixty\\n(60) days`` would otherwise read as an item label.
+    """
 
     lines: list[LexLine] = []
     cursor = 0
+    at_block_start = True
     for number, raw in enumerate(text.split("\n"), start=1):
         span = TextSpan(cursor, cursor + len(raw))
         cursor = span.end + 1
@@ -106,13 +112,22 @@ def lex_lines(text: str) -> list[LexLine]:
         indent = len(raw) - len(raw.lstrip())
         if not stripped:
             lines.append(LexLine(number=number, kind=LineKind.BLANK, span=span, indent=0))
+            at_block_start = True
             continue
         content_start = span.start + indent
-        lines.append(_classify(number, raw.strip(), span, indent, content_start))
+        lines.append(_classify(number, stripped, span, indent, content_start, at_block_start))
+        at_block_start = False
     return lines
 
 
-def _classify(number: int, stripped: str, span: TextSpan, indent: int, start: int) -> LexLine:
+def _classify(
+    number: int,
+    stripped: str,
+    span: TextSpan,
+    indent: int,
+    start: int,
+    at_block_start: bool,
+) -> LexLine:
     section = _SECTION_RE.match(stripped)
     if section is not None:
         return LexLine(
@@ -137,7 +152,7 @@ def _classify(number: int, stripped: str, span: TextSpan, indent: int, start: in
         return LexLine(number=number, kind=LineKind.TITLE, span=span, indent=indent)
     if _ENACTING_RE.match(stripped):
         return LexLine(number=number, kind=LineKind.ENACTING, span=span, indent=indent)
-    labelled = _LABEL_RE.match(stripped)
+    labelled = _LABEL_RE.match(stripped) if at_block_start else None
     if labelled is not None:
         kind = _classify_label(labelled["label"])
         if kind is not LineKind.TEXT:
