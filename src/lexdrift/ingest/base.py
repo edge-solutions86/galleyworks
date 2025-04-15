@@ -14,12 +14,13 @@ from typing import Any, Protocol, runtime_checkable
 
 from lexdrift.errors import IngestError
 from lexdrift.identity import Chamber, InstrumentKey
+from lexdrift.ingest.metadata import BillHeader
 from lexdrift.models import Instrument
 
 __all__ = [
     "Reader",
     "SourceDocument",
-    "key_from_hints",
+    "resolve_key",
 ]
 
 
@@ -63,17 +64,34 @@ class Reader(Protocol):
         """Parse the document into an instrument, or raise ``IngestError``."""
 
 
-def key_from_hints(document: SourceDocument) -> InstrumentKey:
-    """Build an instrument key from caller hints, failing loudly when short."""
+def resolve_key(document: SourceDocument, header: BillHeader | None = None) -> InstrumentKey:
+    """Build an instrument key from caller hints, falling back to the front matter.
 
-    missing = [name for name in ("jurisdiction", "session", "number") if not document.hint(name)]
+    Hints always win. Jurisdiction is never inferred, because a printed bill does
+    not reliably name the state that enacted it and guessing it would merge two
+    corpora that must stay apart.
+    """
+
+    printed = header or BillHeader()
+    session = document.hint("session") or printed.session
+    number = document.hint("number") or printed.number
+    jurisdiction = document.hint("jurisdiction")
+    missing = [
+        name
+        for name, value in (
+            ("jurisdiction", jurisdiction),
+            ("session", session),
+            ("number", number),
+        )
+        if not value
+    ]
     if missing:
         raise IngestError(
             "source document is missing identity hints",
             origin=document.origin,
             missing=",".join(missing),
         )
-    raw_chamber = document.hint("chamber", Chamber.LOWER)
+    raw_chamber = document.hint("chamber") or printed.chamber or Chamber.LOWER
     try:
         chamber = Chamber(raw_chamber)
     except ValueError as exc:
@@ -83,8 +101,8 @@ def key_from_hints(document: SourceDocument) -> InstrumentKey:
             chamber=str(raw_chamber),
         ) from exc
     return InstrumentKey(
-        jurisdiction=str(document.hint("jurisdiction")),
-        session=str(document.hint("session")),
+        jurisdiction=str(jurisdiction),
+        session=str(session),
         chamber=chamber,
-        number=str(document.hint("number")),
+        number=str(number),
     )

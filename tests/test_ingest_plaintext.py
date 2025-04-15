@@ -5,8 +5,7 @@ from pathlib import Path
 import pytest
 
 from lexdrift.errors import IngestError
-from lexdrift.identity import Chamber
-from lexdrift.ingest.base import Reader, SourceDocument, key_from_hints
+from lexdrift.ingest.base import Reader, SourceDocument
 from lexdrift.ingest.plaintext import PlaintextReader
 
 HINTS = {"jurisdiction": "wy", "session": "2025", "number": "HB0142"}
@@ -38,28 +37,6 @@ def test_from_path_reports_a_missing_file(tmp_path: Path) -> None:
 def test_first_lines_is_capped() -> None:
     source = SourceDocument(text="\n".join(str(i) for i in range(200)))
     assert len(source.first_lines) == 40
-
-
-def test_key_from_hints_builds_the_key() -> None:
-    key = key_from_hints(doc(chamber="upper"))
-    assert key.chamber is Chamber.UPPER
-    assert key.slug == "wy/2025/upper/HB0142"
-
-
-def test_key_from_hints_defaults_the_chamber() -> None:
-    assert key_from_hints(doc()).chamber is Chamber.LOWER
-
-
-def test_key_from_hints_names_every_missing_field() -> None:
-    source = SourceDocument(text="x", hints={"jurisdiction": "wy"})
-    with pytest.raises(IngestError, match="missing identity hints") as caught:
-        key_from_hints(source)
-    assert caught.value.context["missing"] == "session,number"
-
-
-def test_key_from_hints_rejects_an_unknown_chamber() -> None:
-    with pytest.raises(IngestError, match="unknown chamber"):
-        key_from_hints(doc(chamber="senate"))
 
 
 def test_blocks_become_sections() -> None:

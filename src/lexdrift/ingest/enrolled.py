@@ -8,9 +8,10 @@ section, which is where the interesting decisions live.
 from __future__ import annotations
 
 from lexdrift.errors import ParseError
-from lexdrift.ingest.base import SourceDocument, key_from_hints
+from lexdrift.ingest.base import SourceDocument, resolve_key
 from lexdrift.ingest.blocks import SectionBlock, split_sections
 from lexdrift.ingest.enrolled_lex import LexLine, LineKind, lex_lines
+from lexdrift.ingest.metadata import parse_effective_date, read_header
 from lexdrift.ingest.structure import nest_section
 from lexdrift.models import Instrument, Segment, SegmentKind, SegmentPath
 
@@ -49,14 +50,16 @@ class EnrolledReader:
             raise ParseError(
                 "enrolled text has no numbered sections", line=1, origin=document.origin
             )
+        header = read_header(document.first_lines)
         segments = _front_matter(lines)
         for block in blocks:
             segments.extend(_section_tree(text, block, first_index=len(segments)))
         return Instrument(
-            key=key_from_hints(document),
+            key=resolve_key(document, header),
             title=str(document.hint("title", _long_title(text, lines))),
             raw_text=text,
             segments=segments,
+            enacted_on=parse_effective_date(text),
             source_format=self.name,
         )
 

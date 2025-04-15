@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 
-from lexdrift.ingest.base import SourceDocument, key_from_hints
+from lexdrift.ingest.base import SourceDocument, resolve_key
 from lexdrift.models import Instrument, Segment, SegmentKind, SegmentPath
 from lexdrift.util.spans import TextSpan
 
@@ -28,7 +28,7 @@ class PlaintextReader:
         return _SNIFF_SCORE if document.text.strip() else 0.0
 
     def read(self, document: SourceDocument) -> Instrument:
-        key = key_from_hints(document)
+        key = resolve_key(document)
         text = document.text
         segments: list[Segment] = []
         for index, span in enumerate(_block_spans(text)):
