@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lexdrift.errors import IngestError, UnknownFormatError
+from lexdrift.ingest.amendment import AmendmentReader, Reading
 from lexdrift.ingest.base import Reader, SourceDocument
 from lexdrift.ingest.enrolled import EnrolledReader
 from lexdrift.ingest.plaintext import PlaintextReader
@@ -102,6 +103,7 @@ def default_registry() -> ReaderRegistry:
     """The registry the CLI and the service use."""
 
     registry = ReaderRegistry()
+    registry.register(AmendmentReader(Reading.PROPOSED))
     registry.register(EnrolledReader())
     registry.register(PlaintextReader())
     return registry

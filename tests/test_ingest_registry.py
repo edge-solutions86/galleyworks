@@ -30,7 +30,7 @@ class StubReader:
 
 
 def test_default_registry_has_the_fallback() -> None:
-    assert default_registry().names == ["enrolled", "plaintext"]
+    assert default_registry().names == ["amendment-proposed", "enrolled", "plaintext"]
 
 
 def test_duplicate_names_are_rejected() -> None:
@@ -49,7 +49,7 @@ def test_get_reports_the_known_names() -> None:
     registry = default_registry()
     with pytest.raises(UnknownFormatError, match="no reader with this name") as caught:
         registry.get("nonesuch")
-    assert caught.value.context["known"] == "enrolled,plaintext"
+    assert caught.value.context["known"] == "amendment-proposed,enrolled,plaintext"
 
 
 def test_detect_picks_the_highest_score() -> None:
