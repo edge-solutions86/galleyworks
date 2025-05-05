@@ -92,20 +92,48 @@ class OffsetMap:
         return TextSpan(start, max(start, end))
 
     def compose(self, later: OffsetMap) -> OffsetMap:
-        """Combine ``self`` (a -> b) with ``later`` (b -> c) into a -> c."""
+        """Combine ``self`` (a -> b) with ``later`` (b -> c) into a -> c.
+
+        An aligned run in ``later`` is split at this map's own piece boundaries.
+        Without that the composition keeps only the coarser of the two
+        alignments, and every offset inside a long run gets interpolated across
+        edits that the finer map knew exactly.
+        """
 
         if later.source_length != self._target_length:
             raise ValueError(
                 "cannot compose offset maps: "
                 f"{self._target_length} target characters against {later.source_length}"
             )
-        pieces = [
-            Piece(source=self.to_source_span(piece.source), target=piece.target)
-            for piece in later.pieces
-        ]
+        pieces: list[Piece] = []
+        for piece in later.pieces:
+            if piece.is_aligned:
+                pieces.extend(self._refine(piece))
+            else:
+                pieces.append(Piece(source=self.to_source_span(piece.source), target=piece.target))
         return OffsetMap(
             pieces, source_length=self._source_length, target_length=later.target_length
         )
+
+    def _refine(self, piece: Piece) -> list[Piece]:
+        """Split one aligned run of ``later`` across this map's pieces."""
+
+        shift = piece.target.start - piece.source.start
+        refined: list[Piece] = []
+        for mine in self._pieces:
+            overlap = mine.target.intersection(piece.source)
+            if overlap is None:
+                continue
+            target = TextSpan(overlap.start + shift, overlap.end + shift)
+            if mine.is_aligned:
+                offset = mine.source.start - mine.target.start
+                source = TextSpan(overlap.start + offset, overlap.end + offset)
+            else:
+                source = self.to_source_span(overlap)
+            refined.append(Piece(source=source, target=target))
+        if not refined:
+            return [Piece(source=self.to_source_span(piece.source), target=piece.target)]
+        return refined
 
 
 class OffsetMapBuilder:
