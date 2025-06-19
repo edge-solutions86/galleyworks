@@ -21,10 +21,12 @@ def test_segment_kind_depth_is_ordered() -> None:
     assert SegmentKind.SUBSECTION.depth < SegmentKind.PARAGRAPH.depth
 
 
-def test_enacting_and_preamble_are_not_body() -> None:
+def test_only_enacted_substance_is_body() -> None:
     assert not SegmentKind.ENACTING.is_body
     assert not SegmentKind.PREAMBLE.is_body
+    assert not SegmentKind.TITLE.is_body
     assert SegmentKind.SECTION.is_body
+    assert SegmentKind.SUBSECTION.is_body
 
 
 def test_segment_path_builds_and_prints() -> None:

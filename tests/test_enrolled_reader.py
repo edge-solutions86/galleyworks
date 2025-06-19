@@ -85,9 +85,10 @@ def test_read_gives_every_segment_a_path(water_bill: SourceDocument) -> None:
     assert paths == ["1", "1(a)", "1(a)(i)", "1(a)(ii)", "1(b)", "2"]
 
 
-def test_body_segments_exclude_the_enacting_clause(water_bill: SourceDocument) -> None:
+def test_body_segments_exclude_the_front_matter(water_bill: SourceDocument) -> None:
     instrument = EnrolledReader().read(water_bill)
-    assert all(segment.kind is not SegmentKind.ENACTING for segment in instrument.body_segments())
+    front = {SegmentKind.ENACTING, SegmentKind.TITLE, SegmentKind.PREAMBLE}
+    assert all(segment.kind not in front for segment in instrument.body_segments())
 
 
 def test_long_title_is_captured(water_bill: SourceDocument) -> None:

@@ -46,10 +46,17 @@ class SegmentKind(StrEnum):
 
     @property
     def is_body(self) -> bool:
-        """Preamble and enacting text are structure, not enacted substance."""
+        """True for enacted substance.
 
-        return self not in (SegmentKind.PREAMBLE, SegmentKind.ENACTING)
+        The long title, the preamble and the enacting clause all describe the
+        act rather than enact anything, and every act in a jurisdiction phrases
+        them alike. Fingerprinting them would report that similarity as reuse.
+        """
 
+        return self not in _NOT_BODY
+
+
+_NOT_BODY = frozenset({SegmentKind.PREAMBLE, SegmentKind.ENACTING, SegmentKind.TITLE})
 
 _KIND_DEPTH: dict[SegmentKind, int] = {
     SegmentKind.PREAMBLE: 0,
