@@ -14,12 +14,14 @@ __all__ = [
     "MASK64",
     "band_of",
     "bands",
+    "from_signed64",
     "hamming",
     "popcount",
     "rotl64",
     "rotr64",
     "sign_vector",
     "similarity_from_hamming",
+    "to_signed64",
 ]
 
 BITS64 = 64
@@ -79,6 +81,23 @@ def sign_vector(value: int) -> tuple[int, ...]:
     """Expand a 64-bit value to a tuple of +1 / -1, most significant bit first."""
 
     return tuple(1 if (value >> (BITS64 - 1 - i)) & 1 else -1 for i in range(BITS64))
+
+
+def to_signed64(value: int) -> int:
+    """Reinterpret an unsigned 64-bit value as signed.
+
+    sqlite stores INTEGER as a signed 64-bit word and refuses anything above
+    2**63 - 1, so every hash has to make this trip on the way to a column.
+    """
+
+    masked = value & MASK64
+    return masked - (1 << BITS64) if masked >> (BITS64 - 1) else masked
+
+
+def from_signed64(value: int) -> int:
+    """Reinterpret a signed 64-bit value as unsigned."""
+
+    return value & MASK64
 
 
 def similarity_from_hamming(distance: int) -> float:

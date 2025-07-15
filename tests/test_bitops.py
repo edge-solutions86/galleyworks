@@ -9,12 +9,14 @@ from lexdrift.util.bitops import (
     MASK64,
     band_of,
     bands,
+    from_signed64,
     hamming,
     popcount,
     rotl64,
     rotr64,
     sign_vector,
     similarity_from_hamming,
+    to_signed64,
 )
 
 u64 = st.integers(min_value=0, max_value=MASK64)
@@ -104,3 +106,17 @@ def test_similarity_from_hamming_endpoints() -> None:
 def test_similarity_rejects_impossible_distances(distance: int) -> None:
     with pytest.raises(ValueError, match="outside"):
         similarity_from_hamming(distance)
+
+
+@given(u64)
+def test_signed_conversion_round_trips(value: int) -> None:
+    assert from_signed64(to_signed64(value)) == value
+
+
+def test_signed_conversion_fits_a_sqlite_column() -> None:
+    limit = 1 << 63
+    assert to_signed64(0) == 0
+    assert to_signed64(limit - 1) == limit - 1
+    assert to_signed64(limit) == -limit
+    assert to_signed64(MASK64) == -1
+    assert all(-limit <= to_signed64(v) < limit for v in (0, 1, limit, MASK64))
