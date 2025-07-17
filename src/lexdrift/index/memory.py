@@ -16,42 +16,15 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass
 
 from lexdrift.config import EngineConfig
 from lexdrift.errors import StoreError
 from lexdrift.fingerprint.records import SegmentFingerprint
 from lexdrift.identity import InstrumentKey
+from lexdrift.index.base import IndexStats, SegmentRef
 from lexdrift.index.lsh import band_keys
 
-__all__ = ["IndexStats", "MemoryIndex", "SegmentRef"]
-
-
-@dataclass(frozen=True, slots=True, order=True)
-class SegmentRef:
-    """Points at one indexed segment."""
-
-    key: InstrumentKey
-    segment_index: int
-
-    @property
-    def slug(self) -> str:
-        return f"{self.key.slug}#{self.segment_index}"
-
-    @classmethod
-    def of(cls, record: SegmentFingerprint) -> SegmentRef:
-        return cls(key=record.key, segment_index=record.segment_index)
-
-
-@dataclass(frozen=True, slots=True)
-class IndexStats:
-    """A summary an operator can read without dumping the index."""
-
-    instruments: int
-    segments: int
-    buckets: int
-    postings: int
-    digest: str
+__all__ = ["MemoryIndex"]
 
 
 class MemoryIndex:

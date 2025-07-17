@@ -22,8 +22,8 @@ from lexdrift.errors import StoreError
 from lexdrift.fingerprint.codec import decode_record, encode_record
 from lexdrift.fingerprint.records import SegmentFingerprint
 from lexdrift.identity import InstrumentKey
+from lexdrift.index.base import IndexStats, SegmentRef
 from lexdrift.index.lsh import band_keys
-from lexdrift.index.memory import IndexStats, SegmentRef
 from lexdrift.index.schema import connect, migrate, read_meta, write_meta
 from lexdrift.models import Instrument
 from lexdrift.util.bitops import to_signed64

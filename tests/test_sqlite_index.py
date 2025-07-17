@@ -7,7 +7,8 @@ import pytest
 from conftest_corpus import LOCAL_CLAUSE, MODEL_CLAUSE, fingerprints, make_bill
 from lexdrift.config import EngineConfig, ShingleConfig
 from lexdrift.errors import StoreError
-from lexdrift.index.memory import MemoryIndex, SegmentRef
+from lexdrift.index.base import SegmentRef
+from lexdrift.index.memory import MemoryIndex
 from lexdrift.index.store import SqliteIndex
 
 
