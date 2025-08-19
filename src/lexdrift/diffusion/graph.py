@@ -6,9 +6,11 @@ because the question the graph exists to answer is which instrument came first.
 Direction is assigned from enactment dates, not from the match, and an edge
 between two instruments with no usable dates is recorded as undirected.
 
-Weights accumulate. Ten passages copied out of one act are one edge with ten
-passages behind it, not ten edges, because the unit an analyst reasons about is
-the pair of documents.
+Counts accumulate, weight does not. Ten passages copied out of one act are one
+edge with ten passages behind it, because the unit an analyst reasons about is
+the pair of documents. The weight stays the strongest containment seen on the
+pair, so it keeps its meaning as a fraction rather than growing past one every
+time another passage is folded in.
 """
 
 from __future__ import annotations
@@ -45,7 +47,7 @@ class ReuseEdge:
             self,
             passages=self.passages + other.passages,
             characters=self.characters + other.characters,
-            weight=self.weight + other.weight,
+            weight=max(self.weight, other.weight),
             directed=self.directed and other.directed,
         )
 

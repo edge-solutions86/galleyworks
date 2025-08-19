@@ -46,7 +46,7 @@ def test_edges_between_the_same_pair_merge() -> None:
     assert merged is not None
     assert merged.passages == 4
     assert merged.characters == 800
-    assert merged.weight == pytest.approx(2.0)
+    assert merged.weight == pytest.approx(1.5)
 
 
 def test_the_two_directions_are_separate_edges() -> None:
@@ -59,6 +59,12 @@ def test_the_two_directions_are_separate_edges() -> None:
 def test_merging_unrelated_edges_is_rejected() -> None:
     with pytest.raises(MatchError, match="different pairs"):
         edge(WY, MT).merged(edge(MT, ND))
+
+
+def test_merging_keeps_the_strongest_weight() -> None:
+    merged = edge(WY, MT, weight=0.4).merged(edge(WY, MT, weight=0.9))
+    assert merged.weight == pytest.approx(0.9)
+    assert merged.passages == 2
 
 
 def test_merging_keeps_undirected_if_either_side_is() -> None:
