@@ -32,6 +32,8 @@ def make_bill(
     enacted: date | None = None,
 ) -> Instrument:
     text = (
+        f"{session}\n\n"
+        f"HOUSE BILL NO. {number}\n\n"
         "AN ACT relating to water rights.\n\n"
         "Be It Enacted by the Legislature:\n\n"
         "Section 1.  W.S. 41-3-101 is amended to read:\n\n"
