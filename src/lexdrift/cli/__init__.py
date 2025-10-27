@@ -18,6 +18,11 @@ def build_cli() -> None:
     global _loaded
     if _loaded:
         return
-    from lexdrift.cli import index_cmd, ingest_cmd, query_cmd  # noqa: F401
+    from lexdrift.cli import (  # noqa: F401
+        index_cmd,
+        ingest_cmd,
+        query_cmd,
+        report_cmd,
+    )
 
     _loaded = True
