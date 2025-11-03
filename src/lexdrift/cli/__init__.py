@@ -19,6 +19,7 @@ def build_cli() -> None:
     if _loaded:
         return
     from lexdrift.cli import (  # noqa: F401
+        diffusion_cmd,
         index_cmd,
         ingest_cmd,
         query_cmd,
