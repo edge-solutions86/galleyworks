@@ -10,11 +10,12 @@ gate in a drafting pipeline.
 
 from __future__ import annotations
 
-import argparse
 from typing import TextIO
 
-from lexdrift.cli.common import add_engine_options, engine_from
-from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Command, register
+import click
+
+from lexdrift.cli.common import build_engine, engine_options
+from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
 from lexdrift.errors import ConfigError
 from lexdrift.ingest.base import SourceDocument
 from lexdrift.report.csv_writer import write_csv
@@ -22,32 +23,9 @@ from lexdrift.report.json_writer import write_json
 from lexdrift.report.model import InstrumentReport
 from lexdrift.report.render import render_text
 
-__all__ = ["FORMATS", "configure", "handle", "write_report"]
+__all__ = ["FORMATS", "query", "write_report"]
 
 FORMATS = ("text", "json", "csv")
-
-
-def configure(parser: argparse.ArgumentParser) -> None:
-    add_engine_options(parser, index_required=True)
-    parser.add_argument("document", help="the document to check")
-    parser.add_argument("--jurisdiction", required=True, help="jurisdiction slug for the document")
-    parser.add_argument("--session", default=None, help="session, when the text does not say")
-    parser.add_argument("--number", default=None, help="instrument number, when the text omits it")
-    parser.add_argument(
-        "--output",
-        dest="output_format",
-        default="text",
-        choices=FORMATS,
-        help="how to print the report",
-    )
-    parser.add_argument("--width", type=int, default=100, help="wrap width for the text report")
-    parser.add_argument(
-        "--fail-over",
-        dest="fail_over",
-        type=float,
-        default=None,
-        help="exit 1 when the reuse ratio is at or above this value",
-    )
 
 
 def write_report(report: InstrumentReport, out: TextIO, *, output_format: str, width: int) -> None:
@@ -59,32 +37,59 @@ def write_report(report: InstrumentReport, out: TextIO, *, output_format: str, w
         write_csv(report, out)
     elif output_format == "text":
         out.write(render_text(report, width=width))
-    else:  # pragma: no cover - argparse restricts the choices
+    else:
         raise ConfigError("unknown output format", output_format=output_format)
 
 
-def handle(args: argparse.Namespace, out: TextIO) -> int:
-    engine = engine_from(args)
-    hints = {"jurisdiction": args.jurisdiction}
-    if args.session is not None:
-        hints["session"] = args.session
-    if args.number is not None:
-        hints["number"] = args.number
-    document = SourceDocument.from_path(args.document, **hints)
-    instrument = engine.registry.read(document)
+@cli.command(name="query", short_help="ask what an instrument reuses from an index")
+@click.argument("document")
+@engine_options(index_required=True)
+@click.option("--jurisdiction", required=True, help="jurisdiction slug for the document")
+@click.option("--session", default=None, help="session, when the text does not say")
+@click.option("--number", default=None, help="instrument number, when the text omits it")
+@click.option(
+    "--output",
+    "output_format",
+    default="text",
+    type=click.Choice(list(FORMATS)),
+    show_default=True,
+    help="how to print the report",
+)
+@click.option("--width", type=int, default=100, show_default=True, help="text wrap width")
+@click.option(
+    "--fail-over",
+    "fail_over",
+    type=float,
+    default=None,
+    help="exit 1 when the reuse ratio is at or above this value",
+)
+@click.pass_obj
+def query(
+    runtime: Runtime,
+    document: str,
+    index_path: str | None,
+    config_path: str | None,
+    profile: str | None,
+    jurisdiction: str,
+    session: str | None,
+    number: str | None,
+    output_format: str,
+    width: int,
+    fail_over: float | None,
+) -> int:
+    """Check DOCUMENT against an index without adding it."""
+
+    engine = build_engine(index_path, config_path, profile)
+    hints: dict[str, str] = {"jurisdiction": jurisdiction}
+    if session is not None:
+        hints["session"] = session
+    if number is not None:
+        hints["number"] = number
+    source = SourceDocument.from_path(document, **hints)
+    instrument = engine.registry.read(source)
     engine.texts.add(instrument)
     report, _ = engine.analyse(instrument)
-    write_report(report, out, output_format=args.output_format, width=args.width)
-    if args.fail_over is not None and report.summary.reuse_ratio >= args.fail_over:
+    write_report(report, runtime.out, output_format=output_format, width=width)
+    if fail_over is not None and report.summary.reuse_ratio >= fail_over:
         return EXIT_FINDINGS
     return EXIT_OK
-
-
-register(
-    Command(
-        name="query",
-        help="ask what an instrument reuses from an index",
-        configure=configure,
-        handler=handle,
-    )
-)

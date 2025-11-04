@@ -11,9 +11,13 @@ requires-python = ">=3.12"
 license = { text = "Proprietary" }
 authors = [{ name = "rkaushik-dev", email = "anitalune373@gmail.com" }]
 dependencies = [
+    "click>=8.1.7,<9",
     "pydantic>=2.10,<3",
     "PyYAML>=6.0.1,<7",
 ]
+
+[project.scripts]
+lexdrift = "lexdrift.cli.main:run"
 
 [project.optional-dependencies]
 service = [

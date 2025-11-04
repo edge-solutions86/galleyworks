@@ -11,48 +11,21 @@ buries the two that matter.
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
-from typing import TextIO
 
-from lexdrift.cli.common import add_engine_options, engine_from
+import click
+
+from lexdrift.cli.common import build_engine, engine_options
 from lexdrift.cli.ingest_cmd import load_corpus
-from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Command, register
+from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
 from lexdrift.diffusion.lineage import Lineage, lineages
-from lexdrift.diffusion.metrics import measure, transitive_reduction
+from lexdrift.diffusion.metrics import DiffusionMetrics, measure, transitive_reduction
 from lexdrift.report.dot_writer import write_dot
 
-__all__ = ["configure", "describe", "handle"]
+__all__ = ["describe", "diffusion"]
 
 
-def configure(parser: argparse.ArgumentParser) -> None:
-    add_engine_options(parser)
-    parser.add_argument("source", help="a corpus directory or a manifest.yaml")
-    parser.add_argument(
-        "--min-members",
-        type=int,
-        default=2,
-        help="ignore families smaller than this",
-    )
-    parser.add_argument(
-        "--crossing-only",
-        action="store_true",
-        help="only report families that cross a jurisdiction",
-    )
-    parser.add_argument(
-        "--reduce",
-        action="store_true",
-        help="drop edges a longer chronological path already implies",
-    )
-    parser.add_argument(
-        "--dot",
-        dest="dot_path",
-        default=None,
-        help="also write the graph as graphviz dot",
-    )
-
-
-def describe(lineage: Lineage, metrics: object) -> list[str]:
+def describe(lineage: Lineage, metrics: DiffusionMetrics) -> list[str]:
     """One block of text about one family."""
 
     root = "unknown" if lineage.root is None else lineage.root.slug
@@ -61,45 +34,63 @@ def describe(lineage: Lineage, metrics: object) -> list[str]:
         f"family of {lineage.size} across {', '.join(lineage.jurisdictions)}",
         f"  earliest: {root} ({confidence})",
     ]
-    span = getattr(metrics, "span_days", None)
-    characters = getattr(metrics, "characters", 0)
-    edges = getattr(metrics, "edges", 0)
-    if span is not None:
-        lines.append(f"  spread over {span} days, {characters} characters across {edges} edges")
+    if metrics.span_days is not None:
+        lines.append(
+            f"  spread over {metrics.span_days} days, {metrics.characters} characters "
+            f"across {metrics.edges} edges"
+        )
     else:
-        lines.append(f"  {characters} characters across {edges} edges, no dates")
+        lines.append(f"  {metrics.characters} characters across {metrics.edges} edges, no dates")
     for member in lineage.members:
         marker = "*" if lineage.root is not None and member == lineage.root else " "
         lines.append(f"   {marker} {member.slug}")
     return lines
 
 
-def handle(args: argparse.Namespace, out: TextIO) -> int:
-    engine = engine_from(args)
-    result = engine.run(load_corpus(args.source))
-    graph = transitive_reduction(result.graph) if args.reduce else result.graph
+@cli.command(name="diffusion", short_help="report which families of instruments share text")
+@click.argument("source")
+@engine_options()
+@click.option(
+    "--min-members", type=int, default=2, show_default=True, help="ignore smaller families"
+)
+@click.option("--crossing-only", is_flag=True, help="only families that cross a jurisdiction")
+@click.option("--reduce", "reduce_edges", is_flag=True, help="drop edges a longer path implies")
+@click.option(
+    "--dot",
+    "dot_path",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="also write the graph as graphviz dot",
+)
+@click.pass_obj
+def diffusion(
+    runtime: Runtime,
+    source: str,
+    index_path: str | None,
+    config_path: str | None,
+    profile: str | None,
+    min_members: int,
+    crossing_only: bool,
+    reduce_edges: bool,
+    dot_path: str | None,
+) -> int:
+    """Report the families of instruments sharing text in SOURCE."""
+
+    engine = build_engine(index_path, config_path, profile)
+    result = engine.run(load_corpus(source))
+    graph = transitive_reduction(result.graph) if reduce_edges else result.graph
     families = [
         lineage
         for lineage in lineages(graph)
-        if lineage.size >= args.min_members and (not args.crossing_only or lineage.spreads)
+        if lineage.size >= min_members and (not crossing_only or lineage.spreads)
     ]
     for lineage in families:
         for line in describe(lineage, measure(graph, lineage)):
-            print(line, file=out)
-        print("", file=out)
-    print(f"{len(families)} families over {len(graph)} edges", file=out)
-    if args.dot_path is not None:
-        with Path(args.dot_path).open("w", encoding="utf-8", newline="\n") as stream:
+            runtime.line(line)
+        runtime.line()
+    runtime.line(f"{len(families)} families over {len(graph)} edges")
+    if dot_path is not None:
+        with Path(dot_path).open("w", encoding="utf-8", newline="\n") as stream:
             write_dot(graph, stream)
-        print(f"graph written to {args.dot_path}", file=out)
+        runtime.line(f"graph written to {dot_path}")
     return EXIT_FINDINGS if families else EXIT_OK
-
-
-register(
-    Command(
-        name="diffusion",
-        help="report which families of instruments share text",
-        configure=configure,
-        handler=handle,
-    )
-)

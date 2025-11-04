@@ -34,13 +34,11 @@ def run(*argv: str) -> tuple[int, str]:
 def test_no_command_prints_help() -> None:
     code, output = run()
     assert code == EXIT_USAGE
-    assert "usage: lexdrift" in output
+    assert "Usage: lexdrift" in output
 
 
 def test_the_version_flag_reports_the_package_version() -> None:
-    with pytest.raises(SystemExit) as caught:
-        main(["--version"], io.StringIO())
-    assert caught.value.code == 0
+    assert main(["--version"], io.StringIO()) == EXIT_OK
 
 
 def test_ingest_lists_what_parsed(tmp_path: Path) -> None:
@@ -101,6 +99,4 @@ def test_a_missing_directory_reports_a_stable_code(tmp_path: Path) -> None:
 
 
 def test_an_unknown_command_is_a_usage_error() -> None:
-    with pytest.raises(SystemExit) as caught:
-        main(["nonesuch"], io.StringIO())
-    assert caught.value.code == EXIT_USAGE
+    assert main(["nonesuch"], io.StringIO()) == EXIT_USAGE

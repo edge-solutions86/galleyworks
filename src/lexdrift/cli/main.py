@@ -1,105 +1,113 @@
 """The command line entry point.
 
-Subcommands are registered rather than hard coded, so a command lives beside the
-code it drives instead of in one growing dispatch function.
+Built on click. The hand-rolled registry this replaced had to reimplement
+subcommand help, option grouping and error formatting, and it still could not do
+nested groups, which ``lexdrift index`` and ``lexdrift index vacuum`` now need.
 
-Exit codes are part of the contract:
+Exit codes are part of the contract and did not change:
 
 * ``0`` the command ran and found nothing worth flagging
 * ``1`` the command ran and the result is a finding, for use in a CI gate
 * ``2`` the arguments were wrong
 * ``3`` a lexdrift error, with its stable code on stderr
+
+Output goes to a stream carried on the click context rather than to
+``sys.stdout`` directly, so a caller can run the CLI in process and read what it
+produced.
 """
 
 from __future__ import annotations
 
-import argparse
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TextIO
+
+import click
 
 from lexdrift import __version__
 from lexdrift.errors import LexdriftError
 from lexdrift.util.logging import configure_logging
 
-__all__ = ["Command", "COMMANDS", "build_parser", "main", "register"]
+__all__ = ["Runtime", "cli", "main"]
 
 EXIT_OK = 0
 EXIT_FINDINGS = 1
 EXIT_USAGE = 2
 EXIT_ERROR = 3
 
-Handler = Callable[[argparse.Namespace, TextIO], int]
+
+@dataclass(slots=True)
+class Runtime:
+    """What every subcommand needs from the top level."""
+
+    out: TextIO
+
+    def line(self, text: str = "") -> None:
+        print(text, file=self.out)
 
 
-@dataclass(frozen=True, slots=True)
-class Command:
-    """One subcommand."""
+@click.group(
+    name="lexdrift",
+    help="Passage-reuse detection for legislative instruments.",
+    invoke_without_command=True,
+    context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 100},
+)
+@click.version_option(__version__, "--version", prog_name="lexdrift")
+@click.option(
+    "--log-level",
+    default="warning",
+    type=click.Choice(["debug", "info", "warning", "error"]),
+    show_default=True,
+    help="how much to write to stderr",
+)
+@click.option(
+    "--log-format",
+    default="plain",
+    type=click.Choice(["plain", "json"]),
+    show_default=True,
+    help="stderr log layout",
+)
+@click.pass_context
+def cli(ctx: click.Context, log_level: str, log_format: str) -> int:
+    """Top level group."""
 
-    name: str
-    help: str
-    configure: Callable[[argparse.ArgumentParser], None]
-    handler: Handler
-
-
-COMMANDS: list[Command] = []
-
-
-def register(command: Command) -> Command:
-    """Add a subcommand to the CLI."""
-
-    if any(existing.name == command.name for existing in COMMANDS):
-        raise ValueError(f"duplicate command {command.name!r}")
-    COMMANDS.append(command)
-    return command
-
-
-def build_parser() -> argparse.ArgumentParser:
-    """Build the top level parser with every registered subcommand."""
-
-    parser = argparse.ArgumentParser(
-        prog="lexdrift",
-        description="Passage-reuse detection for legislative instruments.",
-    )
-    parser.add_argument("--version", action="version", version=f"lexdrift {__version__}")
-    parser.add_argument(
-        "--log-level",
-        default="warning",
-        choices=("debug", "info", "warning", "error"),
-        help="how much to write to stderr",
-    )
-    parser.add_argument(
-        "--log-format",
-        default="plain",
-        choices=("plain", "json"),
-        help="stderr log layout",
-    )
-    subparsers = parser.add_subparsers(dest="command", metavar="command")
-    for command in COMMANDS:
-        sub = subparsers.add_parser(command.name, help=command.help)
-        command.configure(sub)
-        sub.set_defaults(_handler=command.handler)
-    return parser
+    configure_logging(level=log_level, json_output=log_format == "json")
+    if ctx.invoked_subcommand is None:
+        runtime = ctx.find_object(Runtime)
+        stream = sys.stdout if runtime is None else runtime.out
+        stream.write(ctx.get_help())
+        stream.write("\n")
+        return EXIT_USAGE
+    return EXIT_OK
 
 
 def main(argv: Sequence[str] | None = None, stream: TextIO | None = None) -> int:
-    """Run the CLI, returning the process exit code."""
+    """Run the CLI in process, returning the exit code."""
 
-    out = stream or sys.stdout
-    parser = build_parser()
-    args = parser.parse_args(argv)
-    if getattr(args, "_handler", None) is None:
-        parser.print_help(out)
-        return EXIT_USAGE
-    configure_logging(level=args.log_level, json_output=args.log_format == "json")
-    handler: Handler = args._handler
+    from lexdrift.cli import build_cli
+
+    build_cli()
+    runtime = Runtime(out=stream or sys.stdout)
     try:
-        return handler(args, out)
+        result = cli.main(
+            args=list(argv or []),
+            obj=runtime,
+            standalone_mode=False,
+            prog_name="lexdrift",
+        )
+    except click.UsageError as exc:
+        print(exc.format_message(), file=sys.stderr)
+        return EXIT_USAGE
+    except click.exceptions.Exit as exc:
+        return int(exc.exit_code)
+    except click.Abort:
+        return EXIT_USAGE
     except LexdriftError as exc:
         print(f"{exc.code}: {exc}", file=sys.stderr)
         return EXIT_ERROR
+    return EXIT_OK if result is None else int(result)
 
 
 def run() -> None:  # pragma: no cover - console script shim
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

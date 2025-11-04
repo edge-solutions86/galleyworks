@@ -3,50 +3,62 @@
 Kept in one place so ``--index`` and ``--config`` mean the same thing in every
 subcommand. A flag that drifts between commands is the kind of thing nobody
 notices until an operator points the wrong index at the wrong corpus.
+
+:func:`engine_options` is a decorator stack rather than a function that mutates
+a parser, which is how click composes shared options.
 """
 
 from __future__ import annotations
 
-import argparse
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any, TypeVar
+
+import click
 
 from lexdrift.config import EngineConfig
 from lexdrift.index.base import Index, open_index
 from lexdrift.pipeline import Engine
 from lexdrift.settings import load_config
 
-__all__ = ["add_engine_options", "config_from", "engine_from", "index_from"]
+__all__ = ["build_config", "build_engine", "build_index", "engine_options"]
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
-def add_engine_options(parser: argparse.ArgumentParser, *, index_required: bool = False) -> None:
-    """Add ``--index`` and ``--config`` to ``parser``."""
+def engine_options(*, index_required: bool = False) -> Callable[[F], F]:
+    """Add ``--index``, ``--config`` and ``--profile`` to a command."""
 
-    parser.add_argument(
-        "--index",
-        dest="index_path",
-        required=index_required,
-        default=None,
-        help="path to the sqlite index; omit for an in-memory one",
-    )
-    parser.add_argument(
-        "--config",
-        dest="config_path",
-        default=None,
-        help="path to an engine configuration file",
-    )
-    parser.add_argument(
-        "--profile",
-        dest="profile",
-        default=None,
-        help="canonicalization profile to apply",
-    )
+    def decorate(command: F) -> F:
+        command = click.option(
+            "--profile",
+            default=None,
+            help="canonicalization profile to apply",
+        )(command)
+        command = click.option(
+            "--config",
+            "config_path",
+            type=click.Path(dir_okay=False),
+            default=None,
+            help="path to an engine configuration file",
+        )(command)
+        command = click.option(
+            "--index",
+            "index_path",
+            type=click.Path(dir_okay=False),
+            required=index_required,
+            default=None,
+            help="path to the sqlite index; omit for an in-memory one",
+        )(command)
+        return command
+
+    return decorate
 
 
-def config_from(args: argparse.Namespace) -> EngineConfig:
-    """Build the engine configuration these arguments ask for."""
+def build_config(config_path: str | None, profile: str | None) -> EngineConfig:
+    """Build the engine configuration these options ask for."""
 
-    config = load_config(getattr(args, "config_path", None))
-    profile = getattr(args, "profile", None)
+    config = load_config(config_path)
     if profile is None:
         return config
     from lexdrift.canon.profiles import profile as named_profile
@@ -56,16 +68,14 @@ def config_from(args: argparse.Namespace) -> EngineConfig:
     )
 
 
-def index_from(args: argparse.Namespace, config: EngineConfig | None = None) -> Index:
-    """Open the index these arguments name."""
+def build_index(index_path: str | None, config: EngineConfig) -> Index:
+    """Open the index these options name."""
 
-    settings = config or config_from(args)
-    path = getattr(args, "index_path", None)
-    return open_index(None if path is None else Path(path), settings)
+    return open_index(None if index_path is None else Path(index_path), config)
 
 
-def engine_from(args: argparse.Namespace) -> Engine:
+def build_engine(index_path: str | None, config_path: str | None, profile: str | None) -> Engine:
     """Build a fully wired engine from the common options."""
 
-    config = config_from(args)
-    return Engine(config, index_from(args, config))
+    config = build_config(config_path, profile)
+    return Engine(config, build_index(index_path, config))

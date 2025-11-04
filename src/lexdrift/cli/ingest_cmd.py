@@ -7,31 +7,15 @@ most annoying to answer by running the whole pipeline.
 
 from __future__ import annotations
 
-import argparse
-from typing import TextIO
+import click
 
-from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Command, register
+from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
 from lexdrift.corpus import Corpus, discover, load_manifest, read_all
 from lexdrift.errors import IngestError
 from lexdrift.ingest.registry import default_registry
 from lexdrift.models import Instrument
 
-__all__ = ["configure", "handle", "load_corpus"]
-
-
-def configure(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("source", help="a corpus directory or a manifest.yaml")
-    parser.add_argument(
-        "--format",
-        dest="format_name",
-        default=None,
-        help="pin one reader instead of detecting per document",
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="print only the totals",
-    )
+__all__ = ["ingest", "instruments_of", "load_corpus"]
 
 
 def load_corpus(source: str) -> Corpus:
@@ -42,47 +26,38 @@ def load_corpus(source: str) -> Corpus:
     return discover(source)
 
 
-def handle(args: argparse.Namespace, out: TextIO) -> int:
-    corpus = load_corpus(args.source)
+def instruments_of(corpus: Corpus) -> list[Instrument]:
+    """Parse a corpus, letting errors propagate; used by the other commands."""
+
+    return list(read_all(corpus))
+
+
+@cli.command(name="ingest", short_help="parse a corpus and report what came back")
+@click.argument("source")
+@click.option("--format", "format_name", default=None, help="pin one reader for every document")
+@click.option("--quiet", is_flag=True, help="print only the totals")
+@click.pass_obj
+def ingest(runtime: Runtime, source: str, format_name: str | None, quiet: bool) -> int:
+    """Parse every document under SOURCE without indexing anything."""
+
+    corpus = load_corpus(source)
     registry = default_registry()
     parsed = 0
     failed = 0
     for entry in corpus:
         try:
-            instrument = registry.read(
-                entry.source(), format_name=args.format_name or entry.format_name
-            )
+            instrument = registry.read(entry.source(), format_name=format_name or entry.format_name)
         except IngestError as exc:
             failed += 1
-            print(f"failed  {entry.path}: {exc}", file=out)
+            runtime.line(f"failed  {entry.path}: {exc}")
             continue
         parsed += 1
-        if not args.quiet:
+        if not quiet:
             segments = sum(1 for _ in instrument.body_segments())
-            print(
-                f"parsed  {instrument.key.slug}  {instrument.source_format}  {segments} segments",
-                file=out,
+            runtime.line(
+                f"parsed  {instrument.key.slug}  {instrument.source_format}  {segments} segments"
             )
     for path in corpus.skipped:
-        print(f"skipped {path}: file name does not name an instrument", file=out)
-    print(
-        f"{parsed} parsed, {failed} failed, {len(corpus.skipped)} skipped",
-        file=out,
-    )
+        runtime.line(f"skipped {path}: file name does not name an instrument")
+    runtime.line(f"{parsed} parsed, {failed} failed, {len(corpus.skipped)} skipped")
     return EXIT_FINDINGS if failed else EXIT_OK
-
-
-register(
-    Command(
-        name="ingest",
-        help="parse a corpus and report what came back",
-        configure=configure,
-        handler=handle,
-    )
-)
-
-
-def instruments_of(corpus: Corpus) -> list[Instrument]:
-    """Parse a corpus, letting errors propagate; used by the other commands."""
-
-    return list(read_all(corpus))
