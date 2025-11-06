@@ -1,0 +1,143 @@
+"""Request and response models for the HTTP service.
+
+These are deliberately not the internal dataclasses. The engine's types change
+whenever the algorithm does, and the wire format must not. Mapping between them
+is a few lines here and it is the only place a rename can break a client.
+
+Every response carries ``engine_digest``. Two deployments running different
+shingle widths give different answers to the same question, and a client that
+caches results needs to know which engine produced them.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from lexdrift.report.model import InstrumentReport, ReportedMatch, ReportedPassage
+
+__all__ = [
+    "HealthResponse",
+    "MatchOut",
+    "PassageOut",
+    "QueryRequest",
+    "ReportOut",
+    "SummaryOut",
+]
+
+
+class _Model(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class QueryRequest(_Model):
+    """Ask what one document reuses."""
+
+    text: str = Field(min_length=1, max_length=4_000_000)
+    jurisdiction: str = Field(min_length=1, max_length=32)
+    session: str | None = Field(default=None, max_length=32)
+    number: str | None = Field(default=None, max_length=32)
+    format_name: str | None = Field(default=None, max_length=32)
+    include_text: bool = True
+
+
+class PassageOut(_Model):
+    query_start: int
+    query_end: int
+    other_start: int
+    other_end: int
+    characters: int
+    resolved: bool
+    query_text: str | None = None
+    other_text: str | None = None
+
+    @classmethod
+    def of(cls, passage: ReportedPassage, *, include_text: bool) -> PassageOut:
+        return cls(
+            query_start=passage.query_span.start,
+            query_end=passage.query_span.end,
+            other_start=passage.other_span.start,
+            other_end=passage.other_span.end,
+            characters=passage.characters,
+            resolved=passage.resolved,
+            query_text=passage.query_text if include_text else None,
+            other_text=passage.other_text if include_text else None,
+        )
+
+
+class MatchOut(_Model):
+    query_path: str
+    other_instrument: str
+    other_jurisdiction: str
+    other_path: str
+    containment: float
+    jaccard: float
+    characters: int
+    passages: tuple[PassageOut, ...]
+
+    @classmethod
+    def of(cls, match: ReportedMatch, *, include_text: bool) -> MatchOut:
+        return cls(
+            query_path=match.query_path,
+            other_instrument=match.other_key.slug,
+            other_jurisdiction=match.other_key.jurisdiction,
+            other_path=match.other_path,
+            containment=round(match.containment, 6),
+            jaccard=round(match.jaccard, 6),
+            characters=match.characters,
+            passages=tuple(
+                PassageOut.of(passage, include_text=include_text) for passage in match.passages
+            ),
+        )
+
+
+class SummaryOut(_Model):
+    matched_segments: int
+    total_segments: int
+    reused_characters: int
+    document_characters: int
+    other_instruments: int
+    reuse_ratio: float
+
+
+class ReportOut(_Model):
+    instrument: str
+    jurisdiction: str
+    title: str
+    generated_at: datetime
+    engine_digest: str
+    summary: SummaryOut
+    matches: tuple[MatchOut, ...]
+
+    @classmethod
+    def of(cls, report: InstrumentReport, *, digest: str, include_text: bool = True) -> ReportOut:
+        summary = report.summary
+        return cls(
+            instrument=report.key.slug,
+            jurisdiction=report.key.jurisdiction,
+            title=report.title,
+            generated_at=report.generated_at,
+            engine_digest=digest,
+            summary=SummaryOut(
+                matched_segments=summary.matched_segments,
+                total_segments=summary.total_segments,
+                reused_characters=summary.reused_characters,
+                document_characters=summary.document_characters,
+                other_instruments=summary.other_instruments,
+                reuse_ratio=round(summary.reuse_ratio, 6),
+            ),
+            matches=tuple(
+                MatchOut.of(match, include_text=include_text) for match in report.matches
+            ),
+        )
+
+
+class HealthResponse(_Model):
+    """What ``GET /health`` answers."""
+
+    status: str
+    version: str
+    engine_digest: str
+    instruments: int
+    segments: int
