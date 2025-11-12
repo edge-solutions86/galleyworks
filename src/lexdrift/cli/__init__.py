@@ -24,6 +24,7 @@ def build_cli() -> None:
         ingest_cmd,
         query_cmd,
         report_cmd,
+        serve_cmd,
     )
 
     _loaded = True

@@ -100,7 +100,11 @@ def connect(path: str | Path) -> sqlite3.Connection:
 
     target = str(path)
     try:
-        connection = sqlite3.connect(target, isolation_level=None)
+        # The service answers requests from a thread pool, so the connection has
+        # to outlive the thread that opened it. sqlite's own locking plus the
+        # busy timeout below is what serializes access; python's thread check
+        # would only turn a concurrent read into a crash.
+        connection = sqlite3.connect(target, isolation_level=None, check_same_thread=False)
     except sqlite3.Error as exc:
         raise StoreError("index database cannot be opened", path=target) from exc
     connection.row_factory = sqlite3.Row
