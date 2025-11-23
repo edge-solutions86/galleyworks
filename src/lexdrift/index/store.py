@@ -58,6 +58,18 @@ class SqliteIndex:
         self._connection.close()
 
     @property
+    def connection(self) -> sqlite3.Connection:
+        """The live connection.
+
+        Maintenance rewrites the derived tables in bulk, which is not something
+        the record-at-a-time API can express, so the connection is part of the
+        contract rather than something a caller has to reach past an underscore
+        to get.
+        """
+
+        return self._connection
+
+    @property
     def digest(self) -> str:
         return self.config.digest()
 

@@ -16,10 +16,6 @@ def store(tmp_path: Path) -> SqliteIndex:
     return index
 
 
-def raw(store: SqliteIndex) -> object:
-    return store._connection  # noqa: SLF001
-
-
 def test_a_fresh_index_is_clean(store: SqliteIndex) -> None:
     report = check_integrity(store)
     assert report.is_clean
@@ -33,7 +29,7 @@ def test_an_empty_index_is_clean(tmp_path: Path) -> None:
 
 
 def test_an_orphan_band_is_found(store: SqliteIndex) -> None:
-    raw(store).execute(
+    store.connection.execute(
         "INSERT INTO band (band_key, slug, segment_index) "
         "VALUES (X'00', 'wy/2025/lower/HB0142', 99)"
     )
@@ -44,38 +40,38 @@ def test_an_orphan_band_is_found(store: SqliteIndex) -> None:
 
 
 def test_an_orphan_posting_is_found(store: SqliteIndex) -> None:
-    raw(store).execute(
+    store.connection.execute(
         "INSERT INTO posting (value, slug, segment_index) VALUES (7, 'wy/2025/lower/HB0142', 99)"
     )
     assert check_integrity(store).orphan_postings == 1
 
 
 def test_a_missing_band_is_found(store: SqliteIndex) -> None:
-    raw(store).execute("DELETE FROM band WHERE rowid = (SELECT MIN(rowid) FROM band)")
+    store.connection.execute("DELETE FROM band WHERE rowid = (SELECT MIN(rowid) FROM band)")
     assert check_integrity(store).missing_bands == 1
 
 
 def test_a_missing_posting_is_found(store: SqliteIndex) -> None:
-    raw(store).execute("DELETE FROM posting WHERE rowid = (SELECT MIN(rowid) FROM posting)")
+    store.connection.execute("DELETE FROM posting WHERE rowid = (SELECT MIN(rowid) FROM posting)")
     assert check_integrity(store).missing_postings == 1
 
 
 def test_an_unreadable_record_is_found(store: SqliteIndex) -> None:
-    raw(store).execute("UPDATE segment SET blob = X'00'")
+    store.connection.execute("UPDATE segment SET blob = X'00'")
     report = check_integrity(store)
     assert report.unreadable == report.segments
     assert not report.is_clean
 
 
 def test_compaction_repairs_a_missing_band(store: SqliteIndex) -> None:
-    raw(store).execute("DELETE FROM band")
+    store.connection.execute("DELETE FROM band")
     assert check_integrity(store).missing_bands > 0
     compact(store)
     assert check_integrity(store).is_clean
 
 
 def test_compaction_removes_orphans(store: SqliteIndex) -> None:
-    raw(store).execute(
+    store.connection.execute(
         "INSERT INTO posting (value, slug, segment_index) VALUES (7, 'wy/2025/lower/HB0142', 99)"
     )
     compact(store)

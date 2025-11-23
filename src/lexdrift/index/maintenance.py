@@ -74,14 +74,10 @@ class CompactionReport:
         return max(0, self.bytes_before - self.bytes_after)
 
 
-def _connection(store: SqliteIndex) -> object:
-    return store._connection  # noqa: SLF001
-
-
 def check_integrity(store: SqliteIndex) -> IntegrityReport:
     """Compare the derived tables against the stored records."""
 
-    conn = store._connection  # noqa: SLF001
+    conn = store.connection
     segments = int(conn.execute("SELECT COUNT(*) AS n FROM segment").fetchone()["n"])
     orphan_bands = int(
         conn.execute(
@@ -137,7 +133,7 @@ def check_integrity(store: SqliteIndex) -> IntegrityReport:
 def compact(store: SqliteIndex) -> CompactionReport:
     """Rebuild the derived tables from the records, then reclaim the space."""
 
-    conn = store._connection  # noqa: SLF001
+    conn = store.connection
     before = int(conn.execute("PRAGMA page_count").fetchone()[0]) * int(
         conn.execute("PRAGMA page_size").fetchone()[0]
     )
