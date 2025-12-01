@@ -13,7 +13,8 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, replace
 
-from lexdrift.canon.pipeline import CanonPipeline, CanonResult
+from lexdrift.canon.cache import CachingPipeline
+from lexdrift.canon.pipeline import Canonicalizer, CanonResult
 from lexdrift.canon.profiles import build_pipeline
 from lexdrift.canon.tokens import tokenize, words_only
 from lexdrift.config import EngineConfig
@@ -59,11 +60,17 @@ class Fingerprinter:
     """Builds segment fingerprints under one engine configuration."""
 
     def __init__(
-        self, config: EngineConfig | None = None, pipeline: CanonPipeline | None = None
+        self, config: EngineConfig | None = None, pipeline: Canonicalizer | None = None
     ) -> None:
         self.config = config or EngineConfig()
-        self._pipeline = pipeline or build_pipeline()
+        # A corpus re-prints the same section in every bill that amends it, so
+        # the default pipeline is the cached one.
+        self._pipeline = pipeline or CachingPipeline(build_pipeline())
         self._signer = MinHashSigner(self.config.lsh)
+
+    @property
+    def pipeline(self) -> Canonicalizer:
+        return self._pipeline
 
     @property
     def digest(self) -> str:

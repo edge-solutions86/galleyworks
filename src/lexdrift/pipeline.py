@@ -30,6 +30,7 @@ from lexdrift.match.engine import Matcher, SegmentMatch
 from lexdrift.models import Instrument
 from lexdrift.report.model import InstrumentReport, MappingTextSource, build_report
 from lexdrift.util.logging import get_logger
+from lexdrift.util.timing import Stopwatch
 
 __all__ = ["Engine", "RunResult"]
 
@@ -45,6 +46,7 @@ class RunResult:
     matches: tuple[SegmentMatch, ...] = field(default_factory=tuple)
     graph: ReuseGraph = field(default_factory=ReuseGraph)
     indexed_segments: int = 0
+    timings: tuple[str, ...] = ()
 
     @property
     def instrument_count(self) -> int:
@@ -75,12 +77,14 @@ class Engine:
         self.registry = registry or default_registry()
         self.texts = MappingTextSource()
         self.boilerplate = BoilerplateFilter()
+        self.stopwatch = Stopwatch()
         self._fingerprinter = Fingerprinter(self.config)
 
     def ingest(self, corpus: Corpus) -> list[Instrument]:
         """Parse every document in ``corpus``."""
 
-        instruments = list(read_all(corpus, self.registry))
+        with self.stopwatch.stage("ingest"):
+            instruments = list(read_all(corpus, self.registry))
         for instrument in instruments:
             self.texts.add(instrument)
         _log.info("corpus ingested", extra={"documents": len(instruments)})
@@ -90,8 +94,10 @@ class Engine:
         """Index one instrument, returning how many segments went in."""
 
         self.texts.add(instrument)
-        records = self._fingerprinter.fingerprint(instrument)
-        return self.index.add_all(records)
+        with self.stopwatch.stage("fingerprint"):
+            records = self._fingerprinter.fingerprint(instrument)
+        with self.stopwatch.stage("index"):
+            return self.index.add_all(records)
 
     def add_all(self, instruments: Iterable[Instrument]) -> int:
         return sum(self.add(instrument) for instrument in instruments)
@@ -112,8 +118,11 @@ class Engine:
     ) -> tuple[InstrumentReport, list[SegmentMatch]]:
         """Match one instrument and build its report."""
 
-        matches = dedupe_matches(self.matcher().match_instrument(instrument))
-        return build_report(instrument, matches, self.texts, now=now), matches
+        with self.stopwatch.stage("match"):
+            matches = dedupe_matches(self.matcher().match_instrument(instrument))
+        with self.stopwatch.stage("report"):
+            report = build_report(instrument, matches, self.texts, now=now)
+        return report, matches
 
     def run(self, corpus: Corpus, *, now: datetime | None = None) -> RunResult:
         """Ingest a corpus, then index and match it in one forward pass."""
@@ -134,7 +143,8 @@ class Engine:
             reports.append(report)
             found.extend(matches)
             indexed += self.add(instrument)
-        graph = build_graph(found, instruments)
+        with self.stopwatch.stage("diffusion"):
+            graph = build_graph(found, instruments)
         _log.info(
             "run finished",
             extra={"documents": len(instruments), "matches": len(found), "edges": len(graph)},
@@ -145,4 +155,5 @@ class Engine:
             matches=tuple(found),
             graph=graph,
             indexed_segments=indexed,
+            timings=tuple(self.stopwatch.report()),
         )

@@ -23,6 +23,7 @@ from lexdrift.util.spans import TextSpan
 
 __all__ = [
     "CanonPipeline",
+    "Canonicalizer",
     "CanonResult",
     "Edit",
     "Rule",
@@ -44,6 +45,20 @@ class Edit:
     @property
     def delta(self) -> int:
         return len(self.replacement) - self.span.length
+
+
+@runtime_checkable
+class Canonicalizer(Protocol):
+    """Anything that can canonicalize text.
+
+    The plain pipeline and the caching wrapper both satisfy this, which is what
+    lets the fingerprinter take either without knowing which it has.
+    """
+
+    @property
+    def rule_names(self) -> tuple[str, ...]: ...
+
+    def run(self, text: str, config: CanonConfig | None = None) -> CanonResult: ...
 
 
 @runtime_checkable
