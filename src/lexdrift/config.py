@@ -91,6 +91,7 @@ class MatchConfig(_Frozen):
 
     min_containment: float = Field(default=0.35, ge=0.0, le=1.0)
     min_passage_chars: int = Field(default=90, ge=1)
+    min_content_ratio: float = Field(default=0.25, ge=0.0, le=1.0)
     max_anchor_gap: int = Field(default=40, ge=0)
     max_candidates: int = Field(default=200, ge=1)
     order: Literal["score", "length"] = "score"

@@ -92,10 +92,12 @@ class Matcher:
     def match_record(self, record: SegmentFingerprint) -> list[SegmentMatch]:
         """Match one fingerprinted segment against the index."""
 
+        settings = self.config.match
+        if record.content_ratio < settings.min_content_ratio:
+            return []
         values = self.boilerplate.keeps(record)
         if not values:
             return []
-        settings = self.config.match
         matches: list[SegmentMatch] = []
         for ref in self.index.candidates(record)[: settings.max_candidates]:
             match = self._compare(record, values, ref)
@@ -108,6 +110,8 @@ class Matcher:
     ) -> SegmentMatch | None:
         settings = self.config.match
         other = self.index.record(ref)
+        if other.content_ratio < settings.min_content_ratio:
+            return None
         other_values = self.boilerplate.keeps(other)
         if not other_values:
             return None

@@ -16,16 +16,20 @@ from dataclasses import dataclass, replace
 from lexdrift.canon.cache import CachingPipeline
 from lexdrift.canon.pipeline import Canonicalizer, CanonResult
 from lexdrift.canon.profiles import build_pipeline
+from lexdrift.canon.stopwords import content_ratio, is_stopword
 from lexdrift.canon.tokens import tokenize, words_only
 from lexdrift.config import EngineConfig
+from lexdrift.fingerprint.hashing import hash_token
 from lexdrift.fingerprint.minhash import MinHashSigner
 from lexdrift.fingerprint.shingle import Shingle, shingles_for
-from lexdrift.fingerprint.simhash import simhash_of_tokens
+from lexdrift.fingerprint.simhash import simhash
 from lexdrift.fingerprint.winnow import winnow
 from lexdrift.identity import InstrumentKey
 from lexdrift.models import Instrument, Segment
 
 __all__ = ["Fingerprinter", "SegmentFingerprint"]
+
+_STOPWORD_WEIGHT = 0.2
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +44,17 @@ class SegmentFingerprint:
     simhash: int
     selected: tuple[Shingle, ...]
     canonical: str
+    content_ratio: float = 1.0
+
+    @property
+    def is_recital(self) -> bool:
+        """True when the segment is mostly function words.
+
+        A recital or a caption matches everything and means nothing, so the
+        matcher is allowed to skip it before doing any set arithmetic.
+        """
+
+        return self.content_ratio < 0.25
 
     @property
     def is_empty(self) -> bool:
@@ -106,10 +121,24 @@ class Fingerprinter:
             path=segment.path.printed,
             token_count=len(tokens),
             signature=self._signer.sign(shingle.value for shingle in selected),
-            simhash=simhash_of_tokens(tokens),
+            simhash=simhash(_weighted(tokens)),
+            content_ratio=content_ratio(tokens),
             selected=located,
             canonical=canon.text,
         )
+
+
+def _weighted(tokens: Sequence[str]) -> list[tuple[int, float]]:
+    """Weight the simhash features so boilerplate does not dominate.
+
+    Function words are not dropped. A segment made entirely of them would
+    otherwise sign as zero and collide with every other such segment, which is
+    worse than signing weakly.
+    """
+
+    return [
+        (hash_token(token), _STOPWORD_WEIGHT if is_stopword(token) else 1.0) for token in tokens
+    ]
 
 
 def _to_raw(shingle: Shingle, canon: CanonResult, base: int) -> Shingle:
