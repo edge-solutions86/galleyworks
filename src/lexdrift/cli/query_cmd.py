@@ -10,35 +10,14 @@ gate in a drafting pipeline.
 
 from __future__ import annotations
 
-from typing import TextIO
-
 import click
 
 from lexdrift.cli.common import build_engine, engine_options
 from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
-from lexdrift.errors import ConfigError
 from lexdrift.ingest.base import SourceDocument
-from lexdrift.report.csv_writer import write_csv
-from lexdrift.report.json_writer import write_json
-from lexdrift.report.model import InstrumentReport
-from lexdrift.report.render import render_text
+from lexdrift.report.writers import format_names, write_report
 
-__all__ = ["FORMATS", "query", "write_report"]
-
-FORMATS = ("text", "json", "csv")
-
-
-def write_report(report: InstrumentReport, out: TextIO, *, output_format: str, width: int) -> None:
-    """Write ``report`` in the requested format."""
-
-    if output_format == "json":
-        write_json(report, out)
-    elif output_format == "csv":
-        write_csv(report, out)
-    elif output_format == "text":
-        out.write(render_text(report, width=width))
-    else:
-        raise ConfigError("unknown output format", output_format=output_format)
+__all__ = ["query"]
 
 
 @cli.command(name="query", short_help="ask what an instrument reuses from an index")
@@ -51,7 +30,7 @@ def write_report(report: InstrumentReport, out: TextIO, *, output_format: str, w
     "--output",
     "output_format",
     default="text",
-    type=click.Choice(list(FORMATS)),
+    type=click.Choice(format_names()),
     show_default=True,
     help="how to print the report",
 )

@@ -11,36 +11,25 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import TextIO
 
 import click
 
 from lexdrift.cli.common import build_engine, engine_options
 from lexdrift.cli.ingest_cmd import load_corpus
 from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
-from lexdrift.cli.query_cmd import FORMATS, write_report
-from lexdrift.errors import ConfigError
 from lexdrift.identity import InstrumentKey
-from lexdrift.report.model import InstrumentReport
+from lexdrift.report.writers import format_names, suffix_for, write_report
 
 __all__ = ["file_name_for", "report"]
 
 _UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
-_SUFFIX = {"text": "txt", "json": "json", "csv": "csv"}
 
 
 def file_name_for(key: InstrumentKey, output_format: str) -> str:
     """A file name that survives every filesystem we care about."""
 
     stem = _UNSAFE.sub("-", key.slug).strip("-")
-    try:
-        return f"{stem}.{_SUFFIX[output_format]}"
-    except KeyError as exc:
-        raise ConfigError("unknown output format", output_format=output_format) from exc
-
-
-def _emit(built: InstrumentReport, stream: TextIO, output_format: str, width: int) -> None:
-    write_report(built, stream, output_format=output_format, width=width)
+    return f"{stem}.{suffix_for(output_format)}"
 
 
 @cli.command(name="report", short_help="run a corpus and write one report per instrument")
@@ -57,7 +46,7 @@ def _emit(built: InstrumentReport, stream: TextIO, output_format: str, width: in
     "--output",
     "output_format",
     default="text",
-    type=click.Choice(list(FORMATS)),
+    type=click.Choice(format_names()),
     show_default=True,
     help="report format",
 )
@@ -91,11 +80,11 @@ def report(
         else:
             findings += 1
         if destination is None:
-            _emit(built, runtime.out, output_format, width)
+            write_report(built, runtime.out, output_format=output_format, width=width)
         else:
             path = destination / file_name_for(built.key, output_format)
             with path.open("w", encoding="utf-8", newline="\n") as stream:
-                _emit(built, stream, output_format, width)
+                write_report(built, stream, output_format=output_format, width=width)
             written += 1
     if destination is not None:
         runtime.line(f"{written} reports written to {destination}")
