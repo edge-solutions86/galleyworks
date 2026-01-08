@@ -53,9 +53,11 @@ def _passage_block(passage: ReportedPassage, *, width: int, position: int) -> li
 def _match_block(match: ReportedMatch, *, width: int, limit: int) -> list[str]:
     lines = [
         f"  {match.query_path} matches {match.other_key.slug} at {match.other_path}",
+        f"    confidence {match.confidence.value}",
         f"    containment {match.containment:.2f}  jaccard {match.jaccard:.2f}  "
         f"{match.characters} characters over {len(match.passages)} passages",
     ]
+    lines.extend(f"    why: {reason}" for reason in match.reasons)
     for position, passage in enumerate(match.passages[:limit], start=1):
         lines.extend(_passage_block(passage, width=width, position=position))
     hidden = len(match.passages) - limit

@@ -18,8 +18,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 
+from lexdrift.config import MatchConfig
 from lexdrift.identity import InstrumentKey
 from lexdrift.match.engine import SegmentMatch
+from lexdrift.match.explain import Confidence, explain
 from lexdrift.models import Instrument
 from lexdrift.util.spans import TextSpan, coverage
 
@@ -82,6 +84,9 @@ class ReportedMatch:
     containment: float
     jaccard: float
     passages: tuple[ReportedPassage, ...]
+    confidence: Confidence = Confidence.MODERATE
+    headline: str = ""
+    reasons: tuple[str, ...] = ()
 
     @property
     def characters(self) -> int:
@@ -132,6 +137,7 @@ def build_report(
     source: TextSource | None = None,
     *,
     now: datetime | None = None,
+    match_config: MatchConfig | None = None,
 ) -> InstrumentReport:
     """Resolve matches into a readable report about ``instrument``."""
 
@@ -153,6 +159,7 @@ def build_report(
         )
         covered.extend(passage.query for passage in match.passages)
         matched_paths.add(match.query_path)
+        reasoning = explain(match, match_config)
         reported.append(
             ReportedMatch(
                 query_path=match.query_path,
@@ -161,6 +168,9 @@ def build_report(
                 containment=match.score.query_containment,
                 jaccard=match.score.jaccard,
                 passages=passages,
+                confidence=reasoning.confidence,
+                headline=reasoning.headline,
+                reasons=reasoning.reasons,
             )
         )
     summary = ReportSummary(

@@ -13,6 +13,7 @@ survives every renderer intact.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from typing import TextIO
 
 from lexdrift.report.model import InstrumentReport, ReportedMatch
@@ -42,8 +43,14 @@ def _match_section(match: ReportedMatch, *, index: int) -> list[str]:
         f"| characters | {match.characters} |",
         f"| passages | {len(match.passages)} |",
         f"| other jurisdiction | {_escape_cell(match.other_key.jurisdiction)} |",
+        f"| confidence | {match.confidence.value} |",
         "",
     ]
+    if match.reasons:
+        lines.append("Why this was reported:")
+        lines.append("")
+        lines.extend(f"- {_flow(reason)}" for reason in match.reasons)
+        lines.append("")
     for position, passage in enumerate(match.passages, start=1):
         lines.append(f"**Passage {position}** ({passage.characters} characters)")
         lines.append("")
@@ -86,14 +93,7 @@ def to_markdown(report: InstrumentReport, *, max_passages: int = 3) -> str:
     lines.append("## Findings")
     lines.append("")
     for index, match in enumerate(report.matches, start=1):
-        trimmed = ReportedMatch(
-            query_path=match.query_path,
-            other_key=match.other_key,
-            other_path=match.other_path,
-            containment=match.containment,
-            jaccard=match.jaccard,
-            passages=match.passages[:max_passages],
-        )
+        trimmed = replace(match, passages=match.passages[:max_passages])
         lines.extend(_match_section(trimmed, index=index))
         hidden = len(match.passages) - len(trimmed.passages)
         if hidden > 0:

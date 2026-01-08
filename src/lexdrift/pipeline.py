@@ -121,7 +121,13 @@ class Engine:
         with self.stopwatch.stage("match"):
             matches = dedupe_matches(self.matcher().match_instrument(instrument))
         with self.stopwatch.stage("report"):
-            report = build_report(instrument, matches, self.texts, now=now)
+            report = build_report(
+                instrument,
+                matches,
+                self.texts,
+                now=now,
+                match_config=self.config.match,
+            )
         return report, matches
 
     def run(self, corpus: Corpus, *, now: datetime | None = None) -> RunResult:

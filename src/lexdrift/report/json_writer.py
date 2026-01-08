@@ -53,6 +53,9 @@ def _match(match: ReportedMatch, *, include_text: bool) -> dict[str, Any]:
         "jaccard": round(match.jaccard, 6),
         "characters": match.characters,
         "resolved": match.resolved,
+        "confidence": match.confidence.value,
+        "headline": match.headline,
+        "reasons": list(match.reasons),
         "passages": [_passage(passage, include_text=include_text) for passage in match.passages],
     }
 
