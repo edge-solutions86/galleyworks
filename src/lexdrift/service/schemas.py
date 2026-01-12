@@ -15,10 +15,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from lexdrift.identity import InstrumentKey
+from lexdrift.match.explain import Confidence
 from lexdrift.report.model import InstrumentReport, ReportedMatch, ReportedPassage
 
 __all__ = [
     "HealthResponse",
+    "InstrumentOut",
+    "InstrumentsResponse",
     "MatchOut",
     "PassageOut",
     "QueryRequest",
@@ -74,6 +78,9 @@ class MatchOut(_Model):
     containment: float
     jaccard: float
     characters: int
+    confidence: Confidence
+    headline: str
+    reasons: tuple[str, ...]
     passages: tuple[PassageOut, ...]
 
     @classmethod
@@ -86,6 +93,9 @@ class MatchOut(_Model):
             containment=round(match.containment, 6),
             jaccard=round(match.jaccard, 6),
             characters=match.characters,
+            confidence=match.confidence,
+            headline=match.headline,
+            reasons=match.reasons,
             passages=tuple(
                 PassageOut.of(passage, include_text=include_text) for passage in match.passages
             ),
@@ -131,6 +141,39 @@ class ReportOut(_Model):
                 MatchOut.of(match, include_text=include_text) for match in report.matches
             ),
         )
+
+
+class InstrumentOut(_Model):
+    """One indexed instrument."""
+
+    key: str
+    jurisdiction: str
+    session: str
+    chamber: str
+    number: str
+
+    @classmethod
+    def of(cls, key: InstrumentKey) -> InstrumentOut:
+        return cls(
+            key=key.slug,
+            jurisdiction=key.jurisdiction,
+            session=key.session,
+            chamber=key.chamber.value,
+            number=key.number,
+        )
+
+
+class InstrumentsResponse(_Model):
+    """One page of the corpus listing."""
+
+    total: int
+    offset: int
+    limit: int
+    instruments: tuple[InstrumentOut, ...]
+
+    @property
+    def has_more(self) -> bool:
+        return self.offset + len(self.instruments) < self.total
 
 
 class HealthResponse(_Model):

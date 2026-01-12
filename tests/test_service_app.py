@@ -35,7 +35,7 @@ def test_health_reports_the_index(client: TestClient) -> None:
 
 def test_instruments_are_listed(client: TestClient) -> None:
     payload = client.get("/v1/instruments").json()
-    assert payload["count"] == 1
+    assert payload["total"] == 1
     assert payload["instruments"][0]["key"] == "wy/2025/lower/HB0142"
 
 
@@ -63,6 +63,11 @@ def test_text_can_be_left_out(client: TestClient) -> None:
 def test_the_query_document_is_not_indexed(client: TestClient) -> None:
     client.post("/v1/query", json=query_body())
     assert client.get("/health").json()["instruments"] == 1
+
+
+def test_a_match_carries_its_confidence(client: TestClient) -> None:
+    payload = client.post("/v1/query", json=query_body()).json()
+    assert payload["matches"][0]["confidence"] in {"weak", "moderate", "strong"}
 
 
 def test_a_document_with_no_identity_is_a_422(client: TestClient) -> None:
