@@ -6,10 +6,11 @@ The order is load bearing and is asserted by the tests:
 2. whitespace, so a pattern can rely on single spaces
 3. defined terms, which needs the quotation marks still in place
 4. citations, before numbers can read ``41-3-101`` as three numerals
-5. numerals
-6. enumeration labels
-7. the enacting clause
-8. case folding, last, because the rules above match on capitalisation
+5. cross-references, after citations so a numbered one is already claimed
+6. numerals
+7. enumeration labels
+8. the enacting clause
+9. case folding, last, because the rules above match on capitalisation
 
 A profile is a :class:`~lexdrift.config.CanonConfig` with a name. It never
 reorders rules; it only enables and disables them, which keeps one index
@@ -20,6 +21,7 @@ matches.
 from __future__ import annotations
 
 from lexdrift.canon.citations import CitationRule
+from lexdrift.canon.crossrefs import CrossReferenceRule
 from lexdrift.canon.defined_terms import DefinedTermRule
 from lexdrift.canon.numerals import NumeralRule
 from lexdrift.canon.pipeline import CanonPipeline, CanonResult, Rule
@@ -64,6 +66,7 @@ def default_rules() -> list[Rule]:
         WhitespaceRule(),
         DefinedTermRule(),
         CitationRule(),
+        CrossReferenceRule(),
         NumeralRule(),
         EnumerationRule(),
         EnactingClauseRule(),

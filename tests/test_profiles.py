@@ -21,6 +21,7 @@ def test_rule_order_is_fixed() -> None:
         "whitespace",
         "defined-terms",
         "citations",
+        "cross-references",
         "numerals",
         "enumeration",
         "enacting-clause",
