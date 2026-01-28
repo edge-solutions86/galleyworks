@@ -80,6 +80,7 @@ class CanonConfig(_Frozen):
     profile: str = "default"
     fold_case: bool = True
     fold_unicode: bool = True
+    fold_variants: bool = True
     normalize_numbers: bool = True
     normalize_citations: bool = True
     drop_enumeration_labels: bool = True

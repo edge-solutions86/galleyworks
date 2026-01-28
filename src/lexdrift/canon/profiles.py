@@ -10,7 +10,8 @@ The order is load bearing and is asserted by the tests:
 6. numerals
 7. enumeration labels
 8. the enacting clause
-9. case folding, last, because the rules above match on capitalisation
+9. case folding, because the rules above match on capitalisation
+10. variant spellings, last, on text that is already lowercase
 
 A profile is a :class:`~lexdrift.config.CanonConfig` with a name. It never
 reorders rules; it only enables and disables them, which keeps one index
@@ -27,6 +28,7 @@ from lexdrift.canon.numerals import NumeralRule
 from lexdrift.canon.pipeline import CanonPipeline, CanonResult, Rule
 from lexdrift.canon.structure_rules import EnactingClauseRule, EnumerationRule
 from lexdrift.canon.text_rules import CaseFoldRule, UnicodeFoldRule, WhitespaceRule
+from lexdrift.canon.variants import VariantSpellingRule
 from lexdrift.config import CanonConfig
 from lexdrift.errors import ConfigError
 
@@ -50,6 +52,7 @@ PROFILES: dict[str, CanonConfig] = {
     "verbatim": CanonConfig(
         profile="verbatim",
         fold_case=False,
+        fold_variants=False,
         normalize_numbers=False,
         normalize_citations=False,
         drop_enumeration_labels=False,
@@ -71,6 +74,7 @@ def default_rules() -> list[Rule]:
         EnumerationRule(),
         EnactingClauseRule(),
         CaseFoldRule(),
+        VariantSpellingRule(),
     ]
 
 

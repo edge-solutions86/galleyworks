@@ -26,6 +26,7 @@ def test_rule_order_is_fixed() -> None:
         "enumeration",
         "enacting-clause",
         "case-fold",
+        "variant-spelling",
     ]
 
 
