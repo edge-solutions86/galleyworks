@@ -27,6 +27,7 @@ def build_cli() -> None:
         query_cmd,
         report_cmd,
         serve_cmd,
+        stats_cmd,
     )
 
     _loaded = True
