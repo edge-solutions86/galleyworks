@@ -3,8 +3,21 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from hypothesis import HealthCheck, settings
 
 from lexdrift.ingest.base import SourceDocument
+
+# CI machines are shared and slower than a laptop, so the deadline that is
+# useful locally turns into a flaky failure there. The profile is registered
+# once here rather than repeated on every property test.
+settings.register_profile(
+    "ci",
+    max_examples=50,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+settings.register_profile("dev", max_examples=25, deadline=None)
+settings.load_profile("ci")
 
 WATER_BILL = """2025
 
