@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from types import TracebackType
 
@@ -40,6 +41,7 @@ class SqliteIndex:
         self.config = config or EngineConfig()
         self.path = str(path)
         self._connection = connect(self.path)
+        self._in_bulk = False
         migrate(self._connection)
         self._check_digest()
 
@@ -122,6 +124,44 @@ class SqliteIndex:
     def add(self, record: SegmentFingerprint) -> SegmentRef:
         """Write one record, replacing any earlier record for that segment."""
 
+        if self._in_bulk:
+            return self._write(record)
+        try:
+            self._connection.execute("BEGIN")
+            ref = self._write(record)
+            self._connection.execute("COMMIT")
+        except sqlite3.Error as exc:
+            self._connection.execute("ROLLBACK")
+            raise StoreError("index write failed", ref=SegmentRef.of(record).slug) from exc
+        return ref
+
+    @contextmanager
+    def bulk(self) -> Iterator[SqliteIndex]:
+        """Write everything inside the block in one transaction.
+
+        A per-record transaction costs an fsync each, and indexing a session of
+        bills is tens of thousands of them. Grouping the writes turns a corpus
+        load from minutes into seconds; the cost is that a failure rolls the
+        whole block back rather than stopping partway, which for an index that
+        is rebuilt from documents is the behaviour you want anyway.
+        """
+
+        if self._in_bulk:
+            raise StoreError("bulk writes cannot be nested", path=self.path)
+        self._connection.execute("BEGIN")
+        self._in_bulk = True
+        try:
+            yield self
+        except BaseException:
+            self._in_bulk = False
+            self._connection.execute("ROLLBACK")
+            raise
+        self._in_bulk = False
+        self._connection.execute("COMMIT")
+
+    def _write(self, record: SegmentFingerprint) -> SegmentRef:
+        """Insert one record; the caller owns the transaction."""
+
         if len(record.signature) != self.config.lsh.permutations:
             raise StoreError(
                 "record signature width does not match the index",
@@ -130,48 +170,45 @@ class SqliteIndex:
             )
         ref = SegmentRef.of(record)
         slug = record.key.slug
-        try:
-            self._connection.execute("BEGIN")
-            self._ensure_instrument(record.key)
-            self._delete_segment(slug, record.segment_index)
-            self._connection.execute(
-                "INSERT INTO segment "
-                "(slug, segment_index, path, token_count, simhash, blob) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    slug,
-                    record.segment_index,
-                    record.path,
-                    record.token_count,
-                    to_signed64(record.simhash),
-                    encode_record(record),
-                ),
-            )
-            self._connection.executemany(
-                "INSERT OR IGNORE INTO band (band_key, slug, segment_index) VALUES (?, ?, ?)",
-                [
-                    (key, slug, record.segment_index)
-                    for key in band_keys(record.signature, self.config.lsh)
-                ],
-            )
-            self._connection.executemany(
-                "INSERT OR IGNORE INTO posting (value, slug, segment_index) VALUES (?, ?, ?)",
-                [
-                    (to_signed64(value), slug, record.segment_index)
-                    for value in record.fingerprint_values
-                ],
-            )
-            self._connection.execute("COMMIT")
-        except sqlite3.Error as exc:
-            self._connection.execute("ROLLBACK")
-            raise StoreError("index write failed", ref=ref.slug) from exc
+        self._ensure_instrument(record.key)
+        self._delete_segment(slug, record.segment_index)
+        self._connection.execute(
+            "INSERT INTO segment "
+            "(slug, segment_index, path, token_count, simhash, blob) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                slug,
+                record.segment_index,
+                record.path,
+                record.token_count,
+                to_signed64(record.simhash),
+                encode_record(record),
+            ),
+        )
+        self._connection.executemany(
+            "INSERT OR IGNORE INTO band (band_key, slug, segment_index) VALUES (?, ?, ?)",
+            [
+                (key, slug, record.segment_index)
+                for key in band_keys(record.signature, self.config.lsh)
+            ],
+        )
+        self._connection.executemany(
+            "INSERT OR IGNORE INTO posting (value, slug, segment_index) VALUES (?, ?, ?)",
+            [
+                (to_signed64(value), slug, record.segment_index)
+                for value in record.fingerprint_values
+            ],
+        )
         return ref
 
     def add_all(self, records: Iterable[SegmentFingerprint]) -> int:
+        """Write every record, in one transaction."""
+
         written = 0
-        for record in records:
-            self.add(record)
-            written += 1
+        with self.bulk():
+            for record in records:
+                self._write(record)
+                written += 1
         return written
 
     def _ensure_instrument(self, key: InstrumentKey) -> None:
