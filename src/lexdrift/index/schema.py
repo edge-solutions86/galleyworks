@@ -27,7 +27,7 @@ __all__ = [
     "write_meta",
 ]
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 MIGRATIONS: dict[int, tuple[str, ...]] = {
     1: (
@@ -85,6 +85,7 @@ MIGRATIONS: dict[int, tuple[str, ...]] = {
         "ALTER TABLE instrument ADD COLUMN source_format TEXT NOT NULL DEFAULT 'unknown'",
         "CREATE INDEX instrument_by_jurisdiction ON instrument (jurisdiction, session)",
     ),
+    4: ("ALTER TABLE instrument ADD COLUMN content_digest TEXT",),
 }
 
 _PRAGMAS = (

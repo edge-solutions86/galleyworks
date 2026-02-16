@@ -21,6 +21,7 @@ from types import TracebackType
 from lexdrift.config import EngineConfig
 from lexdrift.errors import StoreError
 from lexdrift.fingerprint.codec import decode_record, encode_record
+from lexdrift.fingerprint.hashing import hash_bytes
 from lexdrift.fingerprint.records import SegmentFingerprint
 from lexdrift.identity import InstrumentKey
 from lexdrift.index.base import IndexStats, SegmentRef
@@ -103,10 +104,12 @@ class SqliteIndex:
         key = instrument.key
         self._connection.execute(
             "INSERT INTO instrument "
-            "(slug, jurisdiction, session, chamber, number, title, enacted_on, source_format) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+            "(slug, jurisdiction, session, chamber, number, title, enacted_on, source_format, "
+            "content_digest) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(slug) DO UPDATE SET title = excluded.title, "
-            "enacted_on = excluded.enacted_on, source_format = excluded.source_format",
+            "enacted_on = excluded.enacted_on, source_format = excluded.source_format, "
+            "content_digest = excluded.content_digest",
             (
                 key.slug,
                 key.jurisdiction,
@@ -118,6 +121,7 @@ class SqliteIndex:
                 if instrument.effective_date is None
                 else instrument.effective_date.isoformat(),
                 instrument.source_format,
+                content_digest(instrument),
             ),
         )
 
@@ -287,6 +291,12 @@ class SqliteIndex:
             postings=count("SELECT COUNT(DISTINCT value) AS n FROM posting"),
             digest=self.digest,
         )
+
+
+def content_digest(instrument: Instrument) -> str:
+    """A stable digest of an instrument's raw text."""
+
+    return f"{hash_bytes(instrument.raw_text.encode('utf-8')):016x}"
 
 
 def _ref(row: sqlite3.Row) -> SegmentRef:

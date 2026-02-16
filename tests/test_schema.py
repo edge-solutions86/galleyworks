@@ -82,10 +82,11 @@ def test_meta_writes_are_upserts(connection: sqlite3.Connection) -> None:
     assert read_meta(connection, "digest") == "two"
 
 
-def test_the_source_format_column_exists(connection: sqlite3.Connection) -> None:
+def test_the_later_columns_exist(connection: sqlite3.Connection) -> None:
     migrate(connection)
     columns = {row["name"] for row in connection.execute("PRAGMA table_info(instrument)")}
     assert "source_format" in columns
+    assert "content_digest" in columns
 
 
 def test_foreign_keys_cascade(connection: sqlite3.Connection) -> None:
