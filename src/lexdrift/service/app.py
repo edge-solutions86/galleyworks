@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -20,6 +21,7 @@ from fastapi.responses import JSONResponse
 from lexdrift import __version__
 from lexdrift.errors import LexdriftError
 from lexdrift.pipeline import Engine
+from lexdrift.service.auth import TokenPolicy, authorize, policy_from_env
 from lexdrift.service.routes import corpus_router, meta_router, query_router
 from lexdrift.service.state import ServiceState
 from lexdrift.util.logging import get_logger
@@ -47,16 +49,21 @@ def error_status(exc: Exception) -> int:
     return 500
 
 
-def create_app(engine: Engine | None = None) -> FastAPI:
+def create_app(engine: Engine | None = None, policy: TokenPolicy | None = None) -> FastAPI:
     """Build the ASGI application around ``engine``."""
 
     state = ServiceState(engine=engine or Engine())
+    guard = policy if policy is not None else policy_from_env()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         _log.info(
             "service starting",
-            extra={"digest": state.digest, "segments": len(state.engine.index)},
+            extra={
+                "digest": state.digest,
+                "segments": len(state.engine.index),
+                "authenticated": guard.is_enforced,
+            },
         )
         yield
         _log.info("service stopping")
@@ -68,6 +75,14 @@ def create_app(engine: Engine | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.service = state
+    app.state.token_policy = guard
+
+    @app.middleware("http")
+    async def authenticate(request: Request, call_next: Any) -> Any:
+        refusal = authorize(request, guard)
+        if refusal is not None:
+            return refusal
+        return await call_next(request)
 
     @app.exception_handler(LexdriftError)
     async def handle_lexdrift_error(request: Request, exc: LexdriftError) -> JSONResponse:
