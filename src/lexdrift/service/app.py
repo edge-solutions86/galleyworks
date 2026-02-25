@@ -22,6 +22,7 @@ from lexdrift import __version__
 from lexdrift.errors import LexdriftError
 from lexdrift.pipeline import Engine
 from lexdrift.service.auth import TokenPolicy, authorize, policy_from_env
+from lexdrift.service.middleware import TimingMiddleware
 from lexdrift.service.routes import corpus_router, meta_router, query_router
 from lexdrift.service.state import ServiceState
 from lexdrift.util.logging import get_logger
@@ -49,7 +50,12 @@ def error_status(exc: Exception) -> int:
     return 500
 
 
-def create_app(engine: Engine | None = None, policy: TokenPolicy | None = None) -> FastAPI:
+def create_app(
+    engine: Engine | None = None,
+    policy: TokenPolicy | None = None,
+    *,
+    slow_ms: float = 1000.0,
+) -> FastAPI:
     """Build the ASGI application around ``engine``."""
 
     state = ServiceState(engine=engine or Engine())
@@ -76,6 +82,7 @@ def create_app(engine: Engine | None = None, policy: TokenPolicy | None = None) 
     )
     app.state.service = state
     app.state.token_policy = guard
+    app.add_middleware(TimingMiddleware, slow_ms=slow_ms)
 
     @app.middleware("http")
     async def authenticate(request: Request, call_next: Any) -> Any:
