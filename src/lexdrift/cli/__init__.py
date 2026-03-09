@@ -25,6 +25,7 @@ def build_cli() -> None:
         diffusion_cmd,
         index_cmd,
         ingest_cmd,
+        manifest_cmd,
         query_cmd,
         report_cmd,
         serve_cmd,
