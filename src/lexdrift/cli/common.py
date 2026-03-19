@@ -18,10 +18,20 @@ import click
 
 from lexdrift.config import EngineConfig
 from lexdrift.index.base import Index, open_index
+from lexdrift.match.explain import Confidence
 from lexdrift.pipeline import Engine
+from lexdrift.report.model import InstrumentReport
+from lexdrift.report.ranking import filter_report
 from lexdrift.settings import load_config
 
-__all__ = ["build_config", "build_engine", "build_index", "engine_options"]
+__all__ = [
+    "build_config",
+    "build_engine",
+    "build_index",
+    "display_options",
+    "engine_options",
+    "narrow",
+]
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -79,3 +89,44 @@ def build_engine(index_path: str | None, config_path: str | None, profile: str |
 
     config = build_config(config_path, profile)
     return Engine(config, build_index(index_path, config))
+
+
+def display_options(command: F) -> F:
+    """Add the flags that decide which findings are printed."""
+
+    command = click.option(
+        "--top",
+        "top",
+        type=int,
+        default=None,
+        help="print only the strongest N findings",
+    )(command)
+    command = click.option(
+        "--crossing-only",
+        is_flag=True,
+        help="print only findings that cross a jurisdiction",
+    )(command)
+    command = click.option(
+        "--min-confidence",
+        type=click.Choice([level.value for level in Confidence]),
+        default=None,
+        help="drop findings below this confidence",
+    )(command)
+    return command
+
+
+def narrow(
+    report: InstrumentReport,
+    *,
+    min_confidence: str | None,
+    crossing_only: bool,
+    top: int | None,
+) -> InstrumentReport:
+    """Apply the display options to a report."""
+
+    return filter_report(
+        report,
+        min_confidence=None if min_confidence is None else Confidence(min_confidence),
+        crossing_only=crossing_only,
+        limit=top,
+    )

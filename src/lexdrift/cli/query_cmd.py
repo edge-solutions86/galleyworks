@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import click
 
-from lexdrift.cli.common import build_engine, engine_options
+from lexdrift.cli.common import build_engine, display_options, engine_options, narrow
 from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
 from lexdrift.ingest.base import SourceDocument
 from lexdrift.report.writers import format_names, write_report
@@ -23,6 +23,7 @@ __all__ = ["query"]
 @cli.command(name="query", short_help="ask what an instrument reuses from an index")
 @click.argument("document")
 @engine_options(index_required=True)
+@display_options
 @click.option("--jurisdiction", required=True, help="jurisdiction slug for the document")
 @click.option("--session", default=None, help="session, when the text does not say")
 @click.option("--number", default=None, help="instrument number, when the text omits it")
@@ -55,6 +56,9 @@ def query(
     output_format: str,
     width: int,
     fail_over: float | None,
+    min_confidence: str | None,
+    crossing_only: bool,
+    top: int | None,
 ) -> int:
     """Check DOCUMENT against an index without adding it."""
 
@@ -68,7 +72,8 @@ def query(
     instrument = engine.registry.read(source)
     engine.texts.add(instrument)
     report, _ = engine.analyse(instrument)
-    write_report(report, runtime.out, output_format=output_format, width=width)
+    shown = narrow(report, min_confidence=min_confidence, crossing_only=crossing_only, top=top)
+    write_report(shown, runtime.out, output_format=output_format, width=width)
     if fail_over is not None and report.summary.reuse_ratio >= fail_over:
         return EXIT_FINDINGS
     return EXIT_OK

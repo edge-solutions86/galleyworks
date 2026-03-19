@@ -14,7 +14,7 @@ from pathlib import Path
 
 import click
 
-from lexdrift.cli.common import build_engine, engine_options
+from lexdrift.cli.common import build_engine, display_options, engine_options, narrow
 from lexdrift.cli.ingest_cmd import load_corpus
 from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
 from lexdrift.identity import InstrumentKey
@@ -35,6 +35,7 @@ def file_name_for(key: InstrumentKey, output_format: str) -> str:
 @cli.command(name="report", short_help="run a corpus and write one report per instrument")
 @click.argument("source")
 @engine_options()
+@display_options
 @click.option(
     "--out",
     "out_dir",
@@ -63,6 +64,9 @@ def report(
     output_format: str,
     only_findings: bool,
     width: int,
+    min_confidence: str | None,
+    crossing_only: bool,
+    top: int | None,
 ) -> int:
     """Run the corpus at SOURCE and report every instrument."""
 
@@ -73,7 +77,8 @@ def report(
         destination.mkdir(parents=True, exist_ok=True)
     written = 0
     findings = 0
-    for built in result.reports:
+    for raw in result.reports:
+        built = narrow(raw, min_confidence=min_confidence, crossing_only=crossing_only, top=top)
         if built.is_empty:
             if only_findings:
                 continue
