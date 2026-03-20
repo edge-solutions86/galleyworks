@@ -20,11 +20,15 @@ from lexdrift.fingerprint.hashing import hash_ngram, hash_token
 from lexdrift.util.spans import TextSpan
 
 __all__ = [
+    "MIN_ADAPTIVE_WIDTH",
     "Shingle",
     "char_shingles",
+    "effective_width",
     "shingles_for",
     "word_shingles",
 ]
+
+MIN_ADAPTIVE_WIDTH = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,10 +80,28 @@ def char_shingles(text: str, width: int, *, offset: int = 0) -> list[Shingle]:
     ]
 
 
-def shingles_for(text: str, config: ShingleConfig, *, offset: int = 0) -> list[Shingle]:
+def effective_width(unit_count: int, config: ShingleConfig) -> int:
+    """The window to use for a text of ``unit_count`` units.
+
+    A subsection of nine words produces no five-word shingles at all under a
+    fixed width, so it is invisible to the index however distinctive it is.
+    Narrowing the window for short text keeps it findable; the floor of two
+    stops the window collapsing to single words, which match everywhere.
+    """
+
+    if unit_count >= config.width:
+        return config.width
+    return max(MIN_ADAPTIVE_WIDTH, min(config.width, unit_count))
+
+
+def shingles_for(
+    text: str, config: ShingleConfig, *, offset: int = 0, adaptive: bool = True
+) -> list[Shingle]:
     """Shingle ``text`` the way ``config`` says to."""
 
     if config.mode is ShingleMode.CHARACTER:
-        return char_shingles(text, config.width, offset=offset)
+        width = effective_width(len(text), config) if adaptive else config.width
+        return char_shingles(text, width, offset=offset)
     tokens = list(words_only(tokenize(text, offset=offset)))
-    return word_shingles(tokens, config.width)
+    width = effective_width(len(tokens), config) if adaptive else config.width
+    return word_shingles(tokens, width)
