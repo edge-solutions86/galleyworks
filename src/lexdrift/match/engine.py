@@ -7,13 +7,19 @@ index. Each stage narrows the previous one:
 2. boilerplate fingerprints are removed from both sides
 3. the surviving sets are scored, and anything under the containment floor goes
 4. what is left is aligned into passages
-5. a match with no passage long enough is dropped, because a score without a
-   passage is not something a person can check
+5. a passage that is too short, or that rests on too few distinct fingerprints,
+   is dropped, because a score without a passage a person can check is not a
+   finding
 
 The order is deliberate. Alignment is the expensive step and it runs last, on a
 candidate set the earlier stages have already cut down. Boilerplate removal runs
 before scoring rather than after, because a score computed over shared
 boilerplate is the number that has to be thrown away, not corrected.
+
+The distinct-anchor floor is the one that is easy to leave out and expensive to
+omit. A repeated phrase inside one long subsection produces many anchors from
+one shared fingerprint, and without the floor that reads as a long passage
+resting on a single coincidence.
 """
 
 from __future__ import annotations
@@ -21,7 +27,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from lexdrift.config import EngineConfig
+from lexdrift.config import EngineConfig, MatchConfig
 from lexdrift.fingerprint.records import Fingerprinter, SegmentFingerprint
 from lexdrift.index.base import Index, SegmentRef
 from lexdrift.match.align import Passage, align
@@ -30,7 +36,7 @@ from lexdrift.match.scoring import PairScore, score_pair
 from lexdrift.models import Instrument
 from lexdrift.util.logging import get_logger
 
-__all__ = ["Matcher", "SegmentMatch"]
+__all__ = ["Matcher", "SegmentMatch", "passage_is_reportable"]
 
 _log = get_logger("match.engine")
 
@@ -59,8 +65,21 @@ class SegmentMatch:
         return len(self.passages)
 
     @property
+    def distinct_anchors(self) -> int:
+        return len({anchor.value for passage in self.passages for anchor in passage.anchors})
+
+    @property
     def crosses_jurisdictions(self) -> bool:
         return self.query.key.jurisdiction != self.other.key.jurisdiction
+
+
+def passage_is_reportable(passage: Passage, settings: MatchConfig) -> bool:
+    """True when a passage clears both floors on its own."""
+
+    if passage.length < settings.min_passage_chars:
+        return False
+    distinct = {anchor.value for anchor in passage.anchors}
+    return len(distinct) >= settings.min_distinct_anchors
 
 
 class Matcher:
@@ -121,7 +140,7 @@ class Matcher:
         passages = tuple(
             passage
             for passage in align(record, other, max_gap=settings.max_anchor_gap)
-            if passage.length >= settings.min_passage_chars
+            if passage_is_reportable(passage, settings)
         )
         if not passages:
             return None
