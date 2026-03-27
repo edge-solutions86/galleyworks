@@ -2,6 +2,12 @@
 
 Every failure that can reach a caller carries a stable ``code``. The codes are
 part of the CLI and service contract, so they change only on a major version.
+
+Each class also carries the HTTP status it means. That used to be a table in the
+service, which put the decision two modules away from the class it described and
+meant a new error type silently became a 500 until someone remembered to add a
+row. An error knows whether it is the caller's fault; the transport should not
+have to be told.
 """
 
 from __future__ import annotations
@@ -13,6 +19,7 @@ class LexdriftError(Exception):
     """Base class for everything this package raises deliberately."""
 
     code = "lexdrift.error"
+    http_status = 500
 
     def __init__(self, message: str, **context: Any) -> None:
         super().__init__(message)
@@ -36,18 +43,21 @@ class ConfigError(LexdriftError):
     """The engine was handed a configuration it cannot run with."""
 
     code = "lexdrift.config"
+    http_status = 400
 
 
 class IngestError(LexdriftError):
     """A source document could not be turned into an instrument."""
 
     code = "lexdrift.ingest"
+    http_status = 422
 
 
 class ParseError(IngestError):
     """A document parser hit text it cannot account for."""
 
     code = "lexdrift.ingest.parse"
+    http_status = 422
 
     def __init__(self, message: str, *, line: int, column: int = 0, **context: Any) -> None:
         super().__init__(message, line=line, column=column, **context)
@@ -62,6 +72,7 @@ class UnknownFormatError(IngestError):
     """No registered reader claimed the document."""
 
     code = "lexdrift.ingest.format"
+    http_status = 415
 
 
 class CanonError(LexdriftError):
@@ -74,12 +85,21 @@ class StoreError(LexdriftError):
     """The index store rejected a read or a write."""
 
     code = "lexdrift.store"
+    http_status = 503
 
 
 class MatchError(LexdriftError):
     """Candidate generation or alignment failed."""
 
     code = "lexdrift.match"
+
+
+def http_status_of(exc: BaseException) -> int:
+    """The HTTP status ``exc`` means, or 500 for anything foreign."""
+
+    if isinstance(exc, LexdriftError):
+        return exc.http_status
+    return 500
 
 
 def error_code_of(exc: BaseException) -> str:

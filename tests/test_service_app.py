@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from conftest_corpus import LOCAL_CLAUSE, MODEL_CLAUSE, make_bill
 from lexdrift import __version__
-from lexdrift.errors import IngestError, StoreError
+from lexdrift.errors import ConfigError, IngestError, StoreError
 from lexdrift.pipeline import Engine
 from lexdrift.service.app import create_app, error_status
 
@@ -96,6 +96,7 @@ def test_the_error_map_is_used() -> None:
     assert error_status(IngestError("x")) == 422
     assert error_status(StoreError("x")) == 503
     assert error_status(ValueError("x")) == 500
+    assert error_status(ConfigError("x")) == 400
 
 
 def test_the_openapi_document_is_served(client: TestClient) -> None:

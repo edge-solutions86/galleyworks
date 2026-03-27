@@ -58,3 +58,37 @@ def test_codes_are_stable(cls: type[errors.LexdriftError], code: str) -> None:
 def test_error_code_of_handles_foreign_exceptions() -> None:
     assert errors.error_code_of(ValueError("nope")) == "lexdrift.unexpected"
     assert errors.error_code_of(errors.StoreError("nope")) == "lexdrift.store"
+
+
+@pytest.mark.parametrize(
+    ("cls", "status"),
+    [
+        (errors.LexdriftError, 500),
+        (errors.ConfigError, 400),
+        (errors.IngestError, 422),
+        (errors.ParseError, 422),
+        (errors.UnknownFormatError, 415),
+        (errors.CanonError, 500),
+        (errors.StoreError, 503),
+        (errors.MatchError, 500),
+    ],
+)
+def test_each_error_names_its_http_status(cls: type[errors.LexdriftError], status: int) -> None:
+    assert cls.http_status == status
+
+
+def test_http_status_of_reads_the_instance() -> None:
+    assert errors.http_status_of(errors.StoreError("x")) == 503
+    assert errors.http_status_of(errors.ParseError("x", line=1)) == 422
+
+
+def test_a_foreign_exception_is_a_server_error() -> None:
+    assert errors.http_status_of(ValueError("x")) == 500
+
+
+def test_a_subclass_inherits_the_status() -> None:
+    class Narrower(errors.StoreError):
+        code = "lexdrift.store.narrow"
+
+    assert Narrower("x").http_status == 503
+    assert errors.http_status_of(Narrower("x")) == 503

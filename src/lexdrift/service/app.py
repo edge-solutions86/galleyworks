@@ -19,7 +19,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from lexdrift import __version__
-from lexdrift.errors import LexdriftError
+from lexdrift.errors import LexdriftError, http_status_of
 from lexdrift.pipeline import Engine
 from lexdrift.service.auth import TokenPolicy, authorize, policy_from_env
 from lexdrift.service.middleware import TimingMiddleware
@@ -31,23 +31,15 @@ __all__ = ["ServiceState", "create_app", "error_status"]
 
 _log = get_logger("service")
 
-_STATUS_BY_CODE: dict[str, int] = {
-    "lexdrift.config": 400,
-    "lexdrift.ingest": 422,
-    "lexdrift.ingest.parse": 422,
-    "lexdrift.ingest.format": 415,
-    "lexdrift.store": 503,
-    "lexdrift.match": 500,
-    "lexdrift.canon": 500,
-}
-
 
 def error_status(exc: Exception) -> int:
-    """The status code the service uses for ``exc``."""
+    """The status code the service uses for ``exc``.
 
-    if isinstance(exc, LexdriftError):
-        return _STATUS_BY_CODE.get(exc.code, 500)
-    return 500
+    The mapping lives on the exception classes; this is the seam that lets a
+    test name the transport behaviour without importing the app.
+    """
+
+    return http_status_of(exc)
 
 
 def create_app(

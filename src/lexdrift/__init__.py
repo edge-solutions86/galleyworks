@@ -12,6 +12,7 @@ from lexdrift.errors import (
     StoreError,
     UnknownFormatError,
     error_code_of,
+    http_status_of,
 )
 
 __version__ = "0.1.0"
@@ -27,4 +28,5 @@ __all__ = [
     "UnknownFormatError",
     "__version__",
     "error_code_of",
+    "http_status_of",
 ]
