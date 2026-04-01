@@ -37,8 +37,8 @@ def test_a_first_incremental_run_indexes_everything(corpus: Path, tmp_path: Path
     path = tmp_path / "index.sqlite"
     code, output = run("index", "--incremental", "--index", str(path), str(corpus))
     assert code == EXIT_OK
-    assert "0 unchanged, 0 changed, 4 new" in output
-    assert "4 instruments" in output
+    assert "0 unchanged, 0 changed, 6 new" in output
+    assert "6 instruments" in output
 
 
 def test_a_second_run_indexes_nothing(corpus: Path, tmp_path: Path) -> None:
@@ -46,7 +46,7 @@ def test_a_second_run_indexes_nothing(corpus: Path, tmp_path: Path) -> None:
     run("index", "--incremental", "--index", str(path), str(corpus))
     code, output = run("index", "--incremental", "--index", str(path), str(corpus))
     assert code == EXIT_OK
-    assert "4 unchanged" in output
+    assert "6 unchanged" in output
     assert "0 instruments, 0 segments indexed" in output
 
 
@@ -59,7 +59,7 @@ def test_only_the_changed_document_is_reindexed(corpus: Path, tmp_path: Path) ->
         encoding="utf-8",
     )
     _, output = run("index", "--incremental", "--index", str(path), str(corpus))
-    assert "3 unchanged, 1 changed" in output
+    assert "5 unchanged, 1 changed" in output
     assert "indexed mt/2024/lower/HB0311" in output
     assert "indexed wy/2023/lower/HB0142" not in output
 
@@ -87,7 +87,7 @@ def test_the_index_still_answers_after_an_incremental_run(corpus: Path, tmp_path
     run("index", "--incremental", "--index", str(path), str(corpus))
     run("index", "--incremental", "--index", str(path), str(corpus))
     with SqliteIndex(path) as store:
-        assert len(store.instruments()) == 4
+        assert len(store.instruments()) == 6
         assert len(store) > 4
 
 
@@ -99,5 +99,5 @@ def test_incremental_needs_a_durable_index(corpus: Path) -> None:
 def test_a_plain_run_still_works(corpus: Path, tmp_path: Path) -> None:
     code, output = run("index", "--index", str(tmp_path / "i.sqlite"), str(corpus))
     assert code == EXIT_OK
-    assert "4 instruments" in output
+    assert "6 instruments" in output
     assert "unchanged" not in output

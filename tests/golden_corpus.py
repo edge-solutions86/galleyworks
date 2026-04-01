@@ -1,9 +1,17 @@
 """A small corpus with a known answer.
 
-Four instruments. Wyoming enacts a scheduling provision in 2023, Montana enacts
-a lightly reworded version of it in 2024, North Dakota enacts a version with one
-subsection dropped in 2025, and Colorado enacts something unrelated. The right
-answer is one family of three with Wyoming at the root, and Colorado outside it.
+Six instruments in two families and one singleton.
+
+The state family: Wyoming enacts a scheduling provision in 2023, Montana enacts
+a lightly reworded version of it in 2024, and North Dakota enacts a version with
+one subsection dropped in 2025. Wyoming is the root.
+
+The municipal family: Laramie adopts a short term rental ordinance in 2024 and
+Cheyenne adopts the same text in 2025 with one number changed. It is here to
+check that a second family is found separately rather than merged into the
+first, and that municipal section numbering does not read as a state citation.
+
+Colorado enacts something unrelated and belongs to neither.
 
 The texts are held here as Python rather than as data files so that a change to
 them shows up in a diff as a change to the fixture, and so that the golden test
@@ -125,11 +133,62 @@ entered the exhibit in the exhibitor's own name.
 Section 2.  This act is effective September 1, 2025.
 """
 
+LARAMIE = """2024
+
+ORDINANCE NO. 2024-31
+
+AN ORDINANCE concerning short term rentals.
+
+Be It Enacted by the Governing Body of the City of Laramie:
+
+Section 1.  15.04.020 is amended to read:
+
+15.04.020.  Short term rental permits.
+
+(a)  No dwelling unit may be offered as a short term rental unless the owner
+holds a current permit issued under this chapter. An application for a permit
+shall state the address of the dwelling unit, the number of bedrooms offered,
+the name of a local contact person available at all hours and proof of
+liability insurance in an amount set by resolution of the governing body.
+
+(b)  A permit expires one (1) year after the date of issuance and is not
+transferable to another owner or to another dwelling unit.
+
+Section 2.  This ordinance is effective April 1, 2024.
+"""
+
+CHEYENNE = """2025
+
+ORDINANCE NO. 2025-08
+
+AN ORDINANCE concerning short term rentals.
+
+Be It Enacted by the Governing Body of the City of Cheyenne:
+
+Section 1.  9.28.040 is amended to read:
+
+9.28.040.  Short term rental permits.
+
+(a)  No dwelling unit may be offered as a short term rental unless the owner
+holds a current permit issued under this chapter. An application for a permit
+shall state the address of the dwelling unit, the number of bedrooms offered,
+the name of a local contact person available at all hours and proof of
+liability insurance in an amount set by resolution of the governing body.
+
+(b)  A permit expires two (2) years after the date of issuance and is not
+transferable to another owner or to another dwelling unit.
+
+Section 2.  This ordinance is effective July 1, 2025.
+"""
+
+
 CORPUS: tuple[tuple[str, str, str, str, date], ...] = (
     ("wy", "2023", "HB0142", WYOMING, date(2023, 7, 1)),
     ("mt", "2024", "HB0311", MONTANA, date(2024, 10, 1)),
     ("nd", "2025", "HB0044", NORTH_DAKOTA, date(2025, 8, 1)),
     ("co", "2025", "SB0007", COLORADO, date(2025, 9, 1)),
+    ("laramie", "2024", "2024-31", LARAMIE, date(2024, 4, 1)),
+    ("cheyenne", "2025", "2025-08", CHEYENNE, date(2025, 7, 1)),
 )
 
 

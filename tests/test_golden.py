@@ -21,6 +21,8 @@ def test_the_corpus_parses() -> None:
         "mt/2024/lower/HB0311",
         "nd/2025/lower/HB0044",
         "co/2025/upper/SB0007",
+        "laramie/2024/council/2024-31",
+        "cheyenne/2025/council/2025-08",
     ]
 
 
@@ -31,6 +33,8 @@ def test_effective_dates_are_read() -> None:
         date(2024, 10, 1),
         date(2025, 8, 1),
         date(2025, 9, 1),
+        date(2024, 4, 1),
+        date(2025, 7, 1),
     ]
 
 
@@ -66,15 +70,35 @@ def test_the_first_instrument_has_nothing_to_match() -> None:
     assert run().reports[0].is_empty
 
 
-def test_there_is_one_family_of_three() -> None:
+def test_there_are_two_families() -> None:
     families = [family for family in lineages(run().graph) if family.size > 1]
-    assert len(families) == 1
-    assert families[0].size == 3
+    assert len(families) == 2
+    assert sorted(family.size for family in families) == [2, 3]
+
+
+def test_the_municipal_family_is_separate() -> None:
+    families = [family for family in lineages(run().graph) if family.size > 1]
+    municipal = next(family for family in families if family.size == 2)
+    assert {m.jurisdiction for m in municipal.members} == {"laramie", "cheyenne"}
+    assert municipal.root is not None
+    assert municipal.root.jurisdiction == "laramie"
+
+
+def test_the_two_families_do_not_share_a_member() -> None:
+    families = [family for family in lineages(run().graph) if family.size > 1]
+    first, second = ({m.slug for m in family.members} for family in families)
+    assert not first & second
+
+
+def test_an_ordinance_matches_only_the_other_ordinance() -> None:
+    report = run().report_for("cheyenne/2025/council/2025-08")
+    assert report is not None
+    assert {m.other_key.jurisdiction for m in report.matches} == {"laramie"}
 
 
 def test_wyoming_is_the_root() -> None:
     result = run()
-    family = next(family for family in lineages(result.graph) if family.size > 1)
+    family = next(family for family in lineages(result.graph) if family.size == 3)
     assert family.root is not None
     assert family.root.jurisdiction == "wy"
     assert family.confident
@@ -82,7 +106,7 @@ def test_wyoming_is_the_root() -> None:
 
 def test_the_family_spans_three_jurisdictions_and_two_years() -> None:
     result = run()
-    family = next(family for family in lineages(result.graph) if family.size > 1)
+    family = next(family for family in lineages(result.graph) if family.size == 3)
     metrics = measure(result.graph, family)
     assert metrics.jurisdictions == 3
     assert metrics.span_days == 762
@@ -91,7 +115,7 @@ def test_the_family_spans_three_jurisdictions_and_two_years() -> None:
 
 def test_colorado_is_not_in_the_family() -> None:
     result = run()
-    family = next(family for family in lineages(result.graph) if family.size > 1)
+    family = next(family for family in lineages(result.graph) if family.size == 3)
     assert all(member.jurisdiction != "co" for member in family.members)
 
 

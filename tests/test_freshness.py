@@ -40,10 +40,10 @@ def test_a_changed_text_changes_the_digest() -> None:
 
 def test_an_empty_index_needs_everything(store: SqliteIndex) -> None:
     report = plan_reindex(store, golden_instruments())
-    assert len(report.added) == 4
+    assert len(report.added) == 6
     assert report.unchanged == ()
     assert not report.is_current
-    assert len(report.to_index) == 4
+    assert len(report.to_index) == 6
 
 
 def test_a_loaded_index_is_current(store: SqliteIndex) -> None:
@@ -51,7 +51,7 @@ def test_a_loaded_index_is_current(store: SqliteIndex) -> None:
     load(store, instruments)
     report = plan_reindex(store, instruments)
     assert report.is_current
-    assert len(report.unchanged) == 4
+    assert len(report.unchanged) == 6
     assert report.to_index == ()
 
 
@@ -67,24 +67,24 @@ def test_a_changed_document_is_detected(store: SqliteIndex) -> None:
 
 def test_a_new_document_is_detected(store: SqliteIndex) -> None:
     instruments = golden_instruments()
-    load(store, instruments[:3])
+    load(store, instruments[:5])
     report = plan_reindex(store, instruments)
-    assert report.added == ("co/2025/upper/SB0007",)
-    assert len(report.unchanged) == 3
+    assert report.added == ("cheyenne/2025/council/2025-08",)
+    assert len(report.unchanged) == 5
 
 
 def test_a_removed_document_is_detected(store: SqliteIndex) -> None:
     instruments = golden_instruments()
     load(store, instruments)
-    report = plan_reindex(store, instruments[:3])
-    assert report.removed == ("co/2025/upper/SB0007",)
+    report = plan_reindex(store, instruments[:5])
+    assert report.removed == ("cheyenne/2025/council/2025-08",)
     assert not report.is_current
 
 
 def test_the_summary_reads_clearly(store: SqliteIndex) -> None:
     instruments = golden_instruments()
     load(store, instruments)
-    assert "4 unchanged" in plan_reindex(store, instruments).summary()
+    assert "6 unchanged" in plan_reindex(store, instruments).summary()
 
 
 def test_a_digest_can_be_recorded_after_the_fact(store: SqliteIndex) -> None:
@@ -109,4 +109,4 @@ def test_reindexing_only_what_changed(store: SqliteIndex) -> None:
             store.register(instrument)
             store.add_all(fingerprinter.fingerprint(instrument))
     assert plan_reindex(store, edited).is_current
-    assert len(store.instruments()) == 4
+    assert len(store.instruments()) == 6

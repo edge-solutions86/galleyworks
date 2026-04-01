@@ -37,7 +37,7 @@ def corpus(tmp_path: Path) -> Path:
 
 def test_a_manifest_names_every_document(corpus: Path) -> None:
     payload, skipped = build_manifest(str(corpus))
-    assert len(payload["documents"]) == 4
+    assert len(payload["documents"]) == 6
     assert skipped == []
 
 
@@ -65,15 +65,15 @@ def test_the_manifest_round_trips_through_the_loader(corpus: Path, tmp_path: Pat
     target = corpus / "corpus.yaml"
     run("manifest", "--out", str(target), str(corpus))
     loaded = load_manifest(target)
-    assert len(loaded) == 4
-    assert len(list(read_all(loaded))) == 4
+    assert len(loaded) == 6
+    assert len(list(read_all(loaded))) == 6
 
 
 def test_the_command_prints_to_stdout(corpus: Path) -> None:
     code, output = run("manifest", str(corpus))
     assert code == EXIT_OK
     payload = yaml.safe_load(output)
-    assert len(payload["documents"]) == 4
+    assert len(payload["documents"]) == 6
 
 
 def test_the_command_writes_a_file(corpus: Path, tmp_path: Path) -> None:
@@ -81,7 +81,7 @@ def test_the_command_writes_a_file(corpus: Path, tmp_path: Path) -> None:
     code, output = run("manifest", "--out", str(target), str(corpus))
     assert code == EXIT_OK
     assert target.exists()
-    assert "4 documents written" in output
+    assert "6 documents written" in output
 
 
 def test_an_existing_manifest_is_not_overwritten(corpus: Path, tmp_path: Path) -> None:

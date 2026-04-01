@@ -57,9 +57,9 @@ def test_an_empty_index_measures_zero() -> None:
 
 def test_the_corpus_is_counted() -> None:
     measured = describe(loaded())
-    assert measured.instruments == 4
+    assert measured.instruments == 6
     assert measured.segments > 4
-    assert set(measured.jurisdictions) == {"wy", "mt", "nd", "co"}
+    assert set(measured.jurisdictions) == {"wy", "mt", "nd", "co", "laramie", "cheyenne"}
     assert set(measured.sessions) == {"2023", "2024", "2025"}
 
 
@@ -97,13 +97,13 @@ def test_an_empty_summary_says_none() -> None:
 def test_the_command_prints_the_summary(index_path: str) -> None:
     code, output = run("stats", "--index", index_path)
     assert code == EXIT_OK
-    assert "4 instruments" in output
+    assert "6 instruments" in output
 
 
 def test_the_command_can_emit_json(index_path: str) -> None:
     _, output = run("stats", "--json", "--index", index_path)
     payload = json.loads(output)
-    assert payload["instruments"] == 4
+    assert payload["instruments"] == 6
     assert payload["jurisdictions"]["wy"] == 1
     assert len(payload["engine_digest"]) == 16
 

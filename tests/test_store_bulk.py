@@ -59,7 +59,7 @@ def test_the_index_is_consistent_after_a_bulk_load(store: SqliteIndex) -> None:
             for record in fingerprinter.fingerprint(instrument):
                 store.add(record)
     assert check_integrity(store).is_clean
-    assert len(store.instruments()) == 4
+    assert len(store.instruments()) == 6
 
 
 def test_a_bad_signature_width_still_fails(tmp_path: Path) -> None:

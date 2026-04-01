@@ -28,12 +28,12 @@ def test_the_state_is_on_the_application(client: TestClient) -> None:
 def test_health_still_answers(client: TestClient) -> None:
     payload = client.get("/health").json()
     assert payload["status"] == "ok"
-    assert payload["instruments"] == 4
+    assert payload["instruments"] == 6
 
 
 def test_the_listing_is_paginated(client: TestClient) -> None:
     payload = client.get("/v1/instruments", params={"limit": 2}).json()
-    assert payload["total"] == 4
+    assert payload["total"] == 6
     assert payload["limit"] == 2
     assert payload["offset"] == 0
     assert len(payload["instruments"]) == 2
@@ -51,7 +51,7 @@ def test_the_second_page_continues(client: TestClient) -> None:
 def test_an_offset_past_the_end_is_empty(client: TestClient) -> None:
     payload = client.get("/v1/instruments", params={"offset": 99}).json()
     assert payload["instruments"] == []
-    assert payload["total"] == 4
+    assert payload["total"] == 6
 
 
 def test_the_listing_can_be_filtered(client: TestClient) -> None:

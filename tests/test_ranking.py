@@ -133,7 +133,7 @@ def test_the_report_command_takes_a_confidence_floor(corpus: Path) -> None:
 
 def test_the_report_command_takes_a_top_limit(corpus: Path) -> None:
     _, output = run("report", "--top", "1", "--only-findings", str(corpus))
-    assert output.count(" matches ") <= 2
+    assert output.count(" matches ") <= 4
 
 
 def test_the_query_command_takes_the_same_flags(corpus: Path, tmp_path: Path) -> None:
