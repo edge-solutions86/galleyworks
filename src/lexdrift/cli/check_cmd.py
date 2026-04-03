@@ -31,13 +31,14 @@ def check(
     index_path: str | None,
     config_path: str | None,
     profile: str | None,
+    reading: str | None,
     repair: bool,
 ) -> int:
     """Check the index named by ``--index``."""
 
     if index_path is None:  # pragma: no cover - click enforces this
         raise ConfigError("an index path is required")
-    config = build_config(config_path, profile)
+    config = build_config(config_path, profile, reading)
     with SqliteIndex(index_path, config) as store:
         report = check_integrity(store)
         runtime.line(report.summary())

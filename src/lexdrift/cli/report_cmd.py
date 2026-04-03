@@ -60,6 +60,7 @@ def report(
     index_path: str | None,
     config_path: str | None,
     profile: str | None,
+    reading: str | None,
     out_dir: str | None,
     output_format: str,
     only_findings: bool,
@@ -70,7 +71,7 @@ def report(
 ) -> int:
     """Run the corpus at SOURCE and report every instrument."""
 
-    engine = build_engine(index_path, config_path, profile)
+    engine = build_engine(index_path, config_path, profile, reading)
     result = engine.run(load_corpus(source))
     destination = None if out_dir is None else Path(out_dir)
     if destination is not None:

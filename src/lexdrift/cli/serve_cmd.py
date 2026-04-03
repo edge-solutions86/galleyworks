@@ -26,7 +26,10 @@ __all__ = ["build_service", "serve"]
 
 
 def build_service(
-    index_path: str | None, config_path: str | None, profile: str | None
+    index_path: str | None,
+    config_path: str | None,
+    profile: str | None,
+    reading: str | None = None,
 ) -> tuple[FastAPI, Engine]:
     """Build the ASGI app and the engine behind it."""
 
@@ -36,7 +39,7 @@ def build_service(
         raise ConfigError(
             "the service extra is not installed", remedy="pip install 'lexdrift[service]'"
         ) from exc
-    engine = build_engine(index_path, config_path, profile)
+    engine = build_engine(index_path, config_path, profile, reading)
     return create_app(engine), engine
 
 
@@ -51,13 +54,14 @@ def serve(
     index_path: str | None,
     config_path: str | None,
     profile: str | None,
+    reading: str | None,
     host: str,
     port: int,
     check: bool,
 ) -> int:
     """Serve the index over HTTP."""
 
-    app, engine = build_service(index_path, config_path, profile)
+    app, engine = build_service(index_path, config_path, profile, reading)
     stats = engine.index.stats()
     runtime.line(
         f"index loaded: {stats.instruments} instruments, {stats.segments} segments, "

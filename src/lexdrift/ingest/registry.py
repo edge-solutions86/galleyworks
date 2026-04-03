@@ -99,11 +99,16 @@ class ReaderRegistry:
         return detection.reader.read(document)
 
 
-def default_registry() -> ReaderRegistry:
-    """The registry the CLI and the service use."""
+def default_registry(reading: Reading | str = Reading.PROPOSED) -> ReaderRegistry:
+    """The registry the CLI and the service use.
+
+    Exactly one amendment reader is registered. Registering both would
+    make the detection order decide which reading a corpus was indexed
+    under, which is a decision that belongs in the configuration.
+    """
 
     registry = ReaderRegistry()
-    registry.register(AmendmentReader(Reading.PROPOSED))
+    registry.register(AmendmentReader(Reading(reading)))
     registry.register(EnrolledReader())
     registry.register(PlaintextReader())
     return registry

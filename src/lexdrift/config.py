@@ -20,6 +20,7 @@ from lexdrift.fingerprint.hashing import hash_bytes
 __all__ = [
     "CanonConfig",
     "EngineConfig",
+    "IngestConfig",
     "LshConfig",
     "MatchConfig",
     "ShingleConfig",
@@ -87,6 +88,22 @@ class CanonConfig(_Frozen):
     drop_enacting_clause: bool = True
 
 
+class IngestConfig(_Frozen):
+    """How documents are read before anything looks at their words.
+
+    An amendment draft describes two texts and the reader has to pick one.
+    Which one is right depends on the question: a drafting office checking a
+    bill against enacted law wants ``current``, and a researcher tracking where
+    language is going wants ``proposed``. It is a corpus level decision, not a
+    per document one, so it lives in the configuration and is part of the index
+    digest: a corpus half read one way and half the other is not comparable
+    with itself.
+    """
+
+    amendment_reading: Literal["current", "proposed"] = "proposed"
+    default_chamber: str = "lower"
+
+
 class MatchConfig(_Frozen):
     """Thresholds applied after candidate generation."""
 
@@ -102,6 +119,7 @@ class MatchConfig(_Frozen):
 class EngineConfig(_Frozen):
     """The whole configuration surface."""
 
+    ingest: IngestConfig = IngestConfig()
     shingle: ShingleConfig = ShingleConfig()
     lsh: LshConfig = LshConfig()
     canon: CanonConfig = CanonConfig()
@@ -121,6 +139,7 @@ class EngineConfig(_Frozen):
         """A short stable identifier for the settings that shape an index."""
 
         shaping = {
+            "ingest": self.ingest.model_dump(mode="json"),
             "shingle": self.shingle.model_dump(mode="json"),
             "lsh": self.lsh.model_dump(mode="json"),
             "canon": self.canon.model_dump(mode="json"),

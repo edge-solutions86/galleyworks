@@ -51,13 +51,14 @@ def index(
     index_path: str | None,
     config_path: str | None,
     profile: str | None,
+    reading: str | None,
     replace: bool,
     incremental: bool,
     stats: bool,
 ) -> int:
     """Index every document under SOURCE."""
 
-    engine = build_engine(index_path, config_path, profile)
+    engine = build_engine(index_path, config_path, profile, reading)
     if incremental and not isinstance(engine.index, SqliteIndex):
         raise ConfigError("incremental indexing needs a durable index", remedy="pass --index")
     instruments = list(read_all(load_corpus(source), engine.registry))

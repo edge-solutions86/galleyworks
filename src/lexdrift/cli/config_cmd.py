@@ -50,6 +50,7 @@ def config(
     index_path: str | None,
     config_path: str | None,
     profile: str | None,
+    reading: str | None,
     as_json: bool,
     list_profiles: bool,
 ) -> int:
@@ -60,12 +61,13 @@ def config(
             marker = "*" if name == (profile or "default") else " "
             runtime.line(f"{marker} {name}")
         return EXIT_OK
-    settings = build_config(config_path, profile)
+    settings = build_config(config_path, profile, reading)
     numbers = derived(settings)
     if as_json:
         runtime.line(json.dumps({"settings": settings.to_mapping(), "derived": numbers}, indent=2))
         return EXIT_OK
     runtime.line(f"profile: {settings.canon.profile}")
+    runtime.line(f"amendment reading: {settings.ingest.amendment_reading}")
     runtime.line(
         f"shingle: {settings.shingle.mode.value} width {settings.shingle.width}, "
         f"winnow window {settings.shingle.winnow_window}"

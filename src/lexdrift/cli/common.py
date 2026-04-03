@@ -41,6 +41,12 @@ def engine_options(*, index_required: bool = False) -> Callable[[F], F]:
 
     def decorate(command: F) -> F:
         command = click.option(
+            "--reading",
+            type=click.Choice(["current", "proposed"]),
+            default=None,
+            help="which reading of an amendment to index",
+        )(command)
+        command = click.option(
             "--profile",
             default=None,
             help="canonicalization profile to apply",
@@ -65,17 +71,25 @@ def engine_options(*, index_required: bool = False) -> Callable[[F], F]:
     return decorate
 
 
-def build_config(config_path: str | None, profile: str | None) -> EngineConfig:
+def build_config(
+    config_path: str | None, profile: str | None, reading: str | None = None
+) -> EngineConfig:
     """Build the engine configuration these options ask for."""
 
     config = load_config(config_path)
-    if profile is None:
-        return config
-    from lexdrift.canon.profiles import profile as named_profile
+    overrides: dict[str, Any] = {}
+    if profile is not None:
+        from lexdrift.canon.profiles import profile as named_profile
 
-    return EngineConfig.from_mapping(
-        {**config.to_mapping(), "canon": named_profile(profile).model_dump(mode="json")}
-    )
+        overrides["canon"] = named_profile(profile).model_dump(mode="json")
+    if reading is not None:
+        overrides["ingest"] = {
+            **config.ingest.model_dump(mode="json"),
+            "amendment_reading": reading,
+        }
+    if not overrides:
+        return config
+    return EngineConfig.from_mapping({**config.to_mapping(), **overrides})
 
 
 def build_index(index_path: str | None, config: EngineConfig) -> Index:
@@ -84,10 +98,15 @@ def build_index(index_path: str | None, config: EngineConfig) -> Index:
     return open_index(None if index_path is None else Path(index_path), config)
 
 
-def build_engine(index_path: str | None, config_path: str | None, profile: str | None) -> Engine:
+def build_engine(
+    index_path: str | None,
+    config_path: str | None,
+    profile: str | None,
+    reading: str | None = None,
+) -> Engine:
     """Build a fully wired engine from the common options."""
 
-    config = build_config(config_path, profile)
+    config = build_config(config_path, profile, reading)
     return Engine(config, build_index(index_path, config))
 
 

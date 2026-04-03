@@ -74,7 +74,7 @@ class Engine:
     ) -> None:
         self.config = config or EngineConfig()
         self.index = index if index is not None else open_index(config=self.config)
-        self.registry = registry or default_registry()
+        self.registry = registry or default_registry(self.config.ingest.amendment_reading)
         self.texts = MappingTextSource()
         self.boilerplate = BoilerplateFilter()
         self.stopwatch = Stopwatch()

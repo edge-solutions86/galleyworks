@@ -69,6 +69,7 @@ def diffusion(
     index_path: str | None,
     config_path: str | None,
     profile: str | None,
+    reading: str | None,
     min_members: int,
     crossing_only: bool,
     reduce_edges: bool,
@@ -76,7 +77,7 @@ def diffusion(
 ) -> int:
     """Report the families of instruments sharing text in SOURCE."""
 
-    engine = build_engine(index_path, config_path, profile)
+    engine = build_engine(index_path, config_path, profile, reading)
     result = engine.run(load_corpus(source))
     graph = transitive_reduction(result.graph) if reduce_edges else result.graph
     families = [

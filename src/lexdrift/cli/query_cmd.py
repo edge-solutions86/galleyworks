@@ -50,6 +50,7 @@ def query(
     index_path: str | None,
     config_path: str | None,
     profile: str | None,
+    reading: str | None,
     jurisdiction: str,
     session: str | None,
     number: str | None,
@@ -62,7 +63,7 @@ def query(
 ) -> int:
     """Check DOCUMENT against an index without adding it."""
 
-    engine = build_engine(index_path, config_path, profile)
+    engine = build_engine(index_path, config_path, profile, reading)
     hints: dict[str, str] = {"jurisdiction": jurisdiction}
     if session is not None:
         hints["session"] = session

@@ -29,11 +29,12 @@ def stats(
     index_path: str | None,
     config_path: str | None,
     profile: str | None,
+    reading: str | None,
     as_json: bool,
 ) -> int:
     """Describe the index named by ``--index``."""
 
-    config = build_config(config_path, profile)
+    config = build_config(config_path, profile, reading)
     measured = describe(build_index(index_path, config))
     if as_json:
         runtime.line(
