@@ -23,6 +23,7 @@ def build_cli() -> None:
         config_cmd,
         diff_cmd,
         diffusion_cmd,
+        explain_cmd,
         index_cmd,
         ingest_cmd,
         manifest_cmd,
