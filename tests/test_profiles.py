@@ -27,6 +27,7 @@ def test_rule_order_is_fixed() -> None:
         "enacting-clause",
         "case-fold",
         "variant-spelling",
+        "morphology",
     ]
 
 

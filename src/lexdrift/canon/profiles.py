@@ -11,7 +11,8 @@ The order is load bearing and is asserted by the tests:
 7. enumeration labels
 8. the enacting clause
 9. case folding, because the rules above match on capitalisation
-10. variant spellings, last, on text that is already lowercase
+10. variant spellings, on text that is already lowercase
+11. morphology, last, so a folded spelling still loses its possessive
 
 A profile is a :class:`~lexdrift.config.CanonConfig` with a name. It never
 reorders rules; it only enables and disables them, which keeps one index
@@ -24,6 +25,7 @@ from __future__ import annotations
 from lexdrift.canon.citations import CitationRule
 from lexdrift.canon.crossrefs import CrossReferenceRule
 from lexdrift.canon.defined_terms import DefinedTermRule
+from lexdrift.canon.morphology import MorphologyRule
 from lexdrift.canon.numerals import NumeralRule
 from lexdrift.canon.pipeline import CanonPipeline, CanonResult, Rule
 from lexdrift.canon.structure_rules import EnactingClauseRule, EnumerationRule
@@ -75,6 +77,7 @@ def default_rules() -> list[Rule]:
         EnactingClauseRule(),
         CaseFoldRule(),
         VariantSpellingRule(),
+        MorphologyRule(),
     ]
 
 
