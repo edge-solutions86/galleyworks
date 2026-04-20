@@ -8,6 +8,7 @@ from lexdrift.config import LshConfig
 from lexdrift.errors import MatchError
 from lexdrift.fingerprint.hashing import MASK64, hash_token
 from lexdrift.fingerprint.minhash import (
+    MERSENNE_PRIME,
     MinHashSigner,
     jaccard_estimate,
     signature_from_bytes,
@@ -107,3 +108,39 @@ def test_a_truncated_blob_is_rejected() -> None:
 
 def test_packing_is_big_endian() -> None:
     assert signature_to_bytes([1]) == b"\x00\x00\x00\x00\x00\x00\x00\x01"
+
+
+def test_the_permutation_family_is_well_formed() -> None:
+    signer_ = signer(64)
+    assert all(0 < value < MERSENNE_PRIME for value in signer_._multipliers)
+    assert all(0 <= value < MERSENNE_PRIME for value in signer_._offsets)
+
+
+def test_the_family_has_no_repeated_permutation() -> None:
+    signer_ = signer(128)
+    pairs = set(zip(signer_._multipliers, signer_._offsets, strict=True))
+    assert len(pairs) == 128
+
+
+def test_every_signature_value_is_inside_the_prime() -> None:
+    signature = signer(64).sign(values("the board shall publish a schedule"))
+    assert all(0 <= value < MERSENNE_PRIME for value in signature)
+
+
+def test_one_added_element_can_only_lower_a_signature() -> None:
+    signer_ = signer(64)
+    base = values("alpha bravo charlie")
+    before = signer_.sign(base)
+    after = signer_.sign([*base, *values("delta")])
+    assert all(a <= b for a, b in zip(after, before, strict=True))
+
+
+def test_a_singleton_signature_is_the_permutation_of_its_value() -> None:
+    signer_ = signer(8)
+    value = values("board")[0]
+    signature = signer_.sign([value])
+    expected = tuple(
+        (m * (value % MERSENNE_PRIME) + b) % MERSENNE_PRIME
+        for m, b in zip(signer_._multipliers, signer_._offsets, strict=True)
+    )
+    assert signature == expected
