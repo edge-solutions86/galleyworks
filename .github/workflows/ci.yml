@@ -15,7 +15,7 @@ env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
-  check:
+  lint:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -41,5 +41,54 @@ jobs:
       - name: mypy
         run: python -m mypy
 
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pip install -e .
+
       - name: pytest
-        run: python -m pytest -q
+        run: python -m pytest -q --cov --cov-report=term-missing --cov-report=xml
+
+      - name: upload coverage
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          if-no-files-found: error
+
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: build
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: install the wheel and run the cli
+        run: |
+          python -m pip install dist/*.whl
+          lexdrift --version
+          lexdrift config
