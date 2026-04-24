@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from lexdrift.ingest.base import SourceDocument, resolve_key
+from lexdrift.ingest.blocks import trim_end
 from lexdrift.models import Instrument, Segment, SegmentKind, SegmentPath
 from lexdrift.util.spans import TextSpan
 
@@ -60,12 +61,10 @@ def _block_spans(text: str) -> list[TextSpan]:
 
 
 def _trimmed(text: str, span: TextSpan) -> TextSpan:
-    start, end = span.start, span.end
-    while start < end and text[start].isspace():
+    start = span.start
+    while start < span.end and text[start].isspace():
         start += 1
-    while end > start and text[end - 1].isspace():
-        end -= 1
-    return TextSpan(start, end)
+    return TextSpan(start, max(start, trim_end(text, span.end)))
 
 
 def _first_line(text: str) -> str:

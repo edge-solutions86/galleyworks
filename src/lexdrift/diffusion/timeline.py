@@ -37,9 +37,12 @@ class TimelineStep:
     def is_origin(self) -> bool:
         return not self.sources
 
-    @property
-    def days_after(self) -> int | None:
-        return None
+    def days_after(self, origin: TimelineStep) -> int | None:
+        """How long after ``origin`` this step landed, when both are dated."""
+
+        if self.when is None or origin.when is None:
+            return None
+        return (self.when - origin.when).days
 
 
 def timeline(graph: ReuseGraph, lineage: Lineage) -> list[TimelineStep]:

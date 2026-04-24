@@ -10,12 +10,11 @@ from __future__ import annotations
 import click
 
 from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
-from lexdrift.corpus import Corpus, discover, load_manifest, read_all
+from lexdrift.corpus import Corpus, discover, load_manifest
 from lexdrift.errors import IngestError
 from lexdrift.ingest.registry import default_registry
-from lexdrift.models import Instrument
 
-__all__ = ["ingest", "instruments_of", "load_corpus"]
+__all__ = ["ingest", "load_corpus"]
 
 
 def load_corpus(source: str) -> Corpus:
@@ -24,12 +23,6 @@ def load_corpus(source: str) -> Corpus:
     if source.endswith((".yaml", ".yml")):
         return load_manifest(source)
     return discover(source)
-
-
-def instruments_of(corpus: Corpus) -> list[Instrument]:
-    """Parse a corpus, letting errors propagate; used by the other commands."""
-
-    return list(read_all(corpus))
 
 
 @cli.command(name="ingest", short_help="parse a corpus and report what came back")

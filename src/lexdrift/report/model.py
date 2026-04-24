@@ -33,6 +33,7 @@ __all__ = [
     "ReportedPassage",
     "TextSource",
     "build_report",
+    "group_by_instrument",
 ]
 
 

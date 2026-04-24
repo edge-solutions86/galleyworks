@@ -42,6 +42,20 @@ def test_a_timeline_runs_in_date_order() -> None:
     assert [step.position for step in steps] == [0, 1, 2]
 
 
+def test_days_after_measures_from_the_origin() -> None:
+    graph = chain()
+    steps = timeline(graph, lineages(graph)[0])
+    assert steps[0].days_after(steps[0]) == 0
+    assert steps[1].days_after(steps[0]) == 365
+
+
+def test_days_after_is_none_without_dates() -> None:
+    graph = ReuseGraph()
+    graph.add(link(A, B))
+    steps = timeline(graph, lineages(graph)[0])
+    assert steps[0].days_after(steps[1]) is None
+
+
 def test_the_first_step_is_the_origin() -> None:
     graph = chain()
     steps = timeline(graph, lineages(graph)[0])

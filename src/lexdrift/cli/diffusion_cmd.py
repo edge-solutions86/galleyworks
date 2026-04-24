@@ -18,11 +18,13 @@ import click
 from lexdrift.cli.common import build_engine, engine_options
 from lexdrift.cli.ingest_cmd import load_corpus
 from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
+from lexdrift.diffusion.graph import ReuseGraph
 from lexdrift.diffusion.lineage import Lineage, lineages
 from lexdrift.diffusion.metrics import DiffusionMetrics, measure, transitive_reduction
+from lexdrift.diffusion.timeline import find_cycles, timeline
 from lexdrift.report.dot_writer import write_dot
 
-__all__ = ["describe", "diffusion"]
+__all__ = ["describe", "diffusion", "render_timeline"]
 
 
 def describe(lineage: Lineage, metrics: DiffusionMetrics) -> list[str]:
@@ -47,6 +49,27 @@ def describe(lineage: Lineage, metrics: DiffusionMetrics) -> list[str]:
     return lines
 
 
+def render_timeline(graph: ReuseGraph, lineage: Lineage) -> list[str]:
+    """One line per member, in the order the text reached them."""
+
+    steps = timeline(graph, lineage)
+    if not steps:
+        return []
+    origin = steps[0]
+    lines = ["  timeline:"]
+    for step in steps:
+        when = "undated" if step.when is None else step.when.isoformat()
+        gap = step.days_after(origin)
+        offset = "" if gap is None or gap == 0 else f", {gap} days later"
+        inherited = (
+            "origin"
+            if step.is_origin
+            else f"{step.inherited_characters} characters from {len(step.sources)} source(s)"
+        )
+        lines.append(f"    {when}{offset}  {step.key.slug}  {inherited}")
+    return lines
+
+
 @cli.command(name="diffusion", short_help="report which families of instruments share text")
 @click.argument("source")
 @engine_options()
@@ -54,6 +77,7 @@ def describe(lineage: Lineage, metrics: DiffusionMetrics) -> list[str]:
     "--min-members", type=int, default=2, show_default=True, help="ignore smaller families"
 )
 @click.option("--crossing-only", is_flag=True, help="only families that cross a jurisdiction")
+@click.option("--timeline", "show_timeline", is_flag=True, help="print each family in date order")
 @click.option("--reduce", "reduce_edges", is_flag=True, help="drop edges a longer path implies")
 @click.option(
     "--dot",
@@ -72,6 +96,7 @@ def diffusion(
     reading: str | None,
     min_members: int,
     crossing_only: bool,
+    show_timeline: bool,
     reduce_edges: bool,
     dot_path: str | None,
 ) -> int:
@@ -88,7 +113,12 @@ def diffusion(
     for lineage in families:
         for line in describe(lineage, measure(graph, lineage)):
             runtime.line(line)
+        if show_timeline:
+            for line in render_timeline(graph, lineage):
+                runtime.line(line)
         runtime.line()
+    for cycle in find_cycles(graph):
+        runtime.line(f"warning: dates disagree around {' -> '.join(cycle)}")
     runtime.line(f"{len(families)} families over {len(graph)} edges")
     if dot_path is not None:
         with Path(dot_path).open("w", encoding="utf-8", newline="\n") as stream:

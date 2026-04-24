@@ -24,6 +24,7 @@ __all__ = [
     "simhash",
     "simhash_distance",
     "simhash_of_tokens",
+    "simhash_similarity",
     "weighted_features",
 ]
 
