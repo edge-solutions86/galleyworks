@@ -22,7 +22,9 @@ from lexdrift.report.model import InstrumentReport, ReportedMatch, ReportedPassa
 __all__ = [
     "HealthResponse",
     "InstrumentOut",
+    "InstrumentDetail",
     "InstrumentsResponse",
+    "SegmentOut",
     "MatchOut",
     "PassageOut",
     "QueryRequest",
@@ -174,6 +176,32 @@ class InstrumentsResponse(_Model):
     @property
     def has_more(self) -> bool:
         return self.offset + len(self.instruments) < self.total
+
+
+class SegmentOut(_Model):
+    """One indexed segment of an instrument."""
+
+    index: int
+    path: str
+    tokens: int
+    fingerprints: int
+    content_ratio: float
+
+
+class InstrumentDetail(_Model):
+    """Everything the index holds about one instrument.
+
+    The segment list is what makes a finding checkable from the outside: a
+    client that has been told "1(a)(ii) matches" can ask which segments exist
+    and how much text each one carries without holding the corpus.
+    """
+
+    instrument: InstrumentOut
+    segments: tuple[SegmentOut, ...]
+
+    @property
+    def total_tokens(self) -> int:
+        return sum(segment.tokens for segment in self.segments)
 
 
 class HealthResponse(_Model):

@@ -97,7 +97,12 @@ def test_a_real_copy_is_reported(client: TestClient) -> None:
 
 def test_the_openapi_document_lists_the_routes(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
-    assert set(paths) == {"/health", "/v1/instruments", "/v1/query"}
+    assert set(paths) == {
+        "/health",
+        "/v1/instruments",
+        "/v1/instruments/{jurisdiction}/{session}/{chamber}/{number}",
+        "/v1/query",
+    }
 
 
 def test_error_mapping_still_applies(client: TestClient) -> None:

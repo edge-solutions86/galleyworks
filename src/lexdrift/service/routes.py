@@ -12,16 +12,20 @@ response, which is fine until the day it is not.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, status
 
 from lexdrift import __version__
+from lexdrift.errors import ConfigError
+from lexdrift.identity import InstrumentKey
 from lexdrift.ingest.base import SourceDocument
 from lexdrift.service.schemas import (
     HealthResponse,
+    InstrumentDetail,
     InstrumentOut,
     InstrumentsResponse,
     QueryRequest,
     ReportOut,
+    SegmentOut,
 )
 from lexdrift.service.state import Service
 
@@ -66,6 +70,38 @@ def instruments(
         offset=offset,
         limit=limit,
         instruments=tuple(InstrumentOut.of(key) for key in page),
+    )
+
+
+@corpus_router.get("/instruments/{jurisdiction}/{session}/{chamber}/{number}")
+def instrument_detail(
+    service: Service, jurisdiction: str, session: str, chamber: str, number: str
+) -> InstrumentDetail:
+    """Every indexed segment of one instrument."""
+
+    slug = f"{jurisdiction}/{session}/{chamber}/{number}"
+    try:
+        key = InstrumentKey.parse(slug)
+    except ConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="no such instrument"
+        ) from exc
+    segments = [record for record in service.engine.index if record.key == key]
+    if not segments:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no such instrument")
+    segments.sort(key=lambda record: record.segment_index)
+    return InstrumentDetail(
+        instrument=InstrumentOut.of(key),
+        segments=tuple(
+            SegmentOut(
+                index=record.segment_index,
+                path=record.path,
+                tokens=record.token_count,
+                fingerprints=len(record.selected),
+                content_ratio=round(record.content_ratio, 4),
+            )
+            for record in segments
+        ),
     )
 
 
