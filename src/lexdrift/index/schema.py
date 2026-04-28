@@ -20,6 +20,7 @@ from lexdrift.errors import StoreError
 __all__ = [
     "MIGRATIONS",
     "SCHEMA_VERSION",
+    "checkpoint",
     "connect",
     "migrate",
     "read_meta",
@@ -88,12 +89,43 @@ MIGRATIONS: dict[int, tuple[str, ...]] = {
     4: ("ALTER TABLE instrument ADD COLUMN content_digest TEXT",),
 }
 
+# Tuned for the two shapes of work this index sees: one long write during a
+# corpus load, and many small reads afterwards.
+#
+# * WAL so a reader is never blocked by the writer
+# * NORMAL sync because the index is derived data; a lost transaction after a
+#   crash costs a reindex, not a document
+# * a 64 MiB page cache, which holds the band table of a mid sized corpus
+# * memory temp storage so the sorts a query does never touch the disk
 _PRAGMAS = (
     "PRAGMA journal_mode = WAL",
     "PRAGMA synchronous = NORMAL",
     "PRAGMA foreign_keys = ON",
     "PRAGMA busy_timeout = 5000",
+    "PRAGMA cache_size = -65536",
+    "PRAGMA temp_store = MEMORY",
 )
+
+_MEMORY_ONLY_SKIPS = ("PRAGMA journal_mode",)
+
+
+def checkpoint(connection: sqlite3.Connection) -> int:
+    """Fold the write ahead log back into the database file.
+
+    Without this a long lived writer leaves a WAL beside the index that can
+    outgrow it, and a reader opening the file cold pays to replay the whole log.
+    """
+
+    try:
+        row = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+    except sqlite3.Error:
+        return 0
+    if row is None:
+        return 0
+    # A database with no write ahead log answers (1, -1, -1): busy, no frames.
+    # That is not a failure, it is a database that had nothing to fold back.
+    pages = int(row[1])
+    return max(0, pages)
 
 
 def connect(path: str | Path) -> sqlite3.Connection:
@@ -110,7 +142,7 @@ def connect(path: str | Path) -> sqlite3.Connection:
         raise StoreError("index database cannot be opened", path=target) from exc
     connection.row_factory = sqlite3.Row
     for pragma in _PRAGMAS:
-        if target == ":memory:" and pragma.startswith("PRAGMA journal_mode"):
+        if target == ":memory:" and pragma.startswith(_MEMORY_ONLY_SKIPS):
             continue
         connection.execute(pragma)
     return connection

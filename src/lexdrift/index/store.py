@@ -26,7 +26,7 @@ from lexdrift.fingerprint.records import SegmentFingerprint
 from lexdrift.identity import InstrumentKey
 from lexdrift.index.base import IndexStats, SegmentRef
 from lexdrift.index.lsh import band_keys
-from lexdrift.index.schema import connect, migrate, read_meta, write_meta
+from lexdrift.index.schema import checkpoint, connect, migrate, read_meta, write_meta
 from lexdrift.models import Instrument
 from lexdrift.util.bitops import to_signed64
 
@@ -58,6 +58,13 @@ class SqliteIndex:
         self.close()
 
     def close(self) -> None:
+        """Checkpoint the log, then close.
+
+        Closing without a checkpoint leaves the WAL on disk for the next reader
+        to replay, which turns a fast open into a slow one for no reason.
+        """
+
+        checkpoint(self._connection)
         self._connection.close()
 
     @property
