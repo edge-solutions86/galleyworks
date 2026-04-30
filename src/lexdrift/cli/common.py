@@ -141,8 +141,10 @@ def narrow(
     crossing_only: bool,
     top: int | None,
 ) -> InstrumentReport:
-    """Apply the display options to a report."""
+    """Apply the display flags on top of whatever the config already did."""
 
+    if min_confidence is None and not crossing_only and top is None:
+        return report
     return filter_report(
         report,
         min_confidence=None if min_confidence is None else Confidence(min_confidence),

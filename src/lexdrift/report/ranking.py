@@ -14,11 +14,18 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import replace
 
+from lexdrift.config import ReportConfig
 from lexdrift.errors import ConfigError
 from lexdrift.match.explain import Confidence
 from lexdrift.report.model import InstrumentReport, ReportedMatch
 
-__all__ = ["CONFIDENCE_ORDER", "filter_report", "rank", "rank_report"]
+__all__ = [
+    "CONFIDENCE_ORDER",
+    "apply_report_config",
+    "filter_report",
+    "rank",
+    "rank_report",
+]
 
 CONFIDENCE_ORDER: dict[Confidence, int] = {
     Confidence.STRONG: 0,
@@ -74,3 +81,18 @@ def filter_report(
     if limit is not None:
         kept = kept[:limit]
     return replace(report, matches=tuple(kept))
+
+
+def apply_report_config(
+    report: InstrumentReport, settings: ReportConfig | None = None
+) -> InstrumentReport:
+    """Narrow a report the way the configuration says to."""
+
+    config = settings or ReportConfig()
+    floor = Confidence(config.min_confidence)
+    return filter_report(
+        report,
+        min_confidence=None if floor is Confidence.WEAK else floor,
+        crossing_only=config.crossing_only,
+        limit=config.top,
+    )

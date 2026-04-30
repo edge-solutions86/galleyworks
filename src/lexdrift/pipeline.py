@@ -29,6 +29,7 @@ from lexdrift.match.dedupe import dedupe_matches
 from lexdrift.match.engine import Matcher, SegmentMatch
 from lexdrift.models import Instrument
 from lexdrift.report.model import InstrumentReport, MappingTextSource, build_report
+from lexdrift.report.ranking import apply_report_config
 from lexdrift.util.logging import get_logger
 from lexdrift.util.timing import Stopwatch
 
@@ -121,12 +122,15 @@ class Engine:
         with self.stopwatch.stage("match"):
             matches = dedupe_matches(self.matcher().match_instrument(instrument))
         with self.stopwatch.stage("report"):
-            report = build_report(
-                instrument,
-                matches,
-                self.texts,
-                now=now,
-                match_config=self.config.match,
+            report = apply_report_config(
+                build_report(
+                    instrument,
+                    matches,
+                    self.texts,
+                    now=now,
+                    match_config=self.config.match,
+                ),
+                self.config.report,
             )
         return report, matches
 

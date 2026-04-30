@@ -69,6 +69,11 @@ def config(
     runtime.line(f"profile: {settings.canon.profile}")
     runtime.line(f"amendment reading: {settings.ingest.amendment_reading}")
     runtime.line(
+        f"report: confidence >= {settings.report.min_confidence}, "
+        f"crossing only {settings.report.crossing_only}, "
+        f"top {settings.report.top or 'all'}"
+    )
+    runtime.line(
         f"shingle: {settings.shingle.mode.value} width {settings.shingle.width}, "
         f"winnow window {settings.shingle.winnow_window}"
     )

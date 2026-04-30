@@ -23,6 +23,7 @@ __all__ = [
     "IngestConfig",
     "LshConfig",
     "MatchConfig",
+    "ReportConfig",
     "ShingleConfig",
     "ShingleMode",
 ]
@@ -116,6 +117,26 @@ class MatchConfig(_Frozen):
     order: Literal["score", "length"] = "score"
 
 
+class ReportConfig(_Frozen):
+    """What a report shows by default.
+
+    Display used to be decided entirely by command line flags, which meant an
+    operator who wanted the same view every day had to remember the same four
+    flags every day, and a scheduled run and an interactive one could disagree
+    about what counted as a finding. These are the defaults; the flags still
+    override them.
+
+    They are not part of the index digest. Changing what a report shows does not
+    change what the index holds, and forcing a reindex for a display change
+    would be the wrong trade.
+    """
+
+    min_confidence: Literal["weak", "moderate", "strong"] = "weak"
+    crossing_only: bool = False
+    top: int | None = Field(default=None, ge=1)
+    max_passages: int = Field(default=3, ge=1)
+
+
 class EngineConfig(_Frozen):
     """The whole configuration surface."""
 
@@ -124,6 +145,7 @@ class EngineConfig(_Frozen):
     lsh: LshConfig = LshConfig()
     canon: CanonConfig = CanonConfig()
     match: MatchConfig = MatchConfig()
+    report: ReportConfig = ReportConfig()
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> EngineConfig:
