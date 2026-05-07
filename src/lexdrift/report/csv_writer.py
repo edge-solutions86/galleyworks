@@ -13,10 +13,10 @@ wrapped text and a row that spans four screen lines makes the file unreadable.
 from __future__ import annotations
 
 import csv
-import re
 from typing import TextIO
 
 from lexdrift.report.model import InstrumentReport
+from lexdrift.report.shared import quote
 
 __all__ = ["COLUMNS", "flatten", "write_csv"]
 
@@ -38,15 +38,7 @@ COLUMNS = (
     "query_text",
 )
 
-_WHITESPACE = re.compile(r"\s+")
 _MAX_QUOTE = 400
-
-
-def _one_line(text: str) -> str:
-    collapsed = _WHITESPACE.sub(" ", text).strip()
-    if len(collapsed) <= _MAX_QUOTE:
-        return collapsed
-    return collapsed[: _MAX_QUOTE - 1] + "…"
 
 
 def flatten(report: InstrumentReport) -> list[dict[str, object]]:
@@ -71,7 +63,7 @@ def flatten(report: InstrumentReport) -> list[dict[str, object]]:
                     "other_start": passage.other_span.start,
                     "other_end": passage.other_span.end,
                     "resolved": "true" if passage.resolved else "false",
-                    "query_text": _one_line(passage.query_text),
+                    "query_text": quote(passage.query_text, limit=_MAX_QUOTE),
                 }
             )
     return rows

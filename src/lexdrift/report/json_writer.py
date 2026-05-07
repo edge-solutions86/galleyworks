@@ -15,21 +15,17 @@ import json
 from typing import Any, TextIO
 
 from lexdrift.report.model import InstrumentReport, ReportedMatch, ReportedPassage
-from lexdrift.util.spans import TextSpan
+from lexdrift.report.shared import span_payload
 
 __all__ = ["FORMAT_VERSION", "dumps", "to_mapping", "write_json"]
 
 FORMAT_VERSION = 1
 
 
-def _span(span: TextSpan) -> dict[str, int]:
-    return {"start": span.start, "end": span.end, "length": span.length}
-
-
 def _passage(passage: ReportedPassage, *, include_text: bool) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "query": _span(passage.query_span),
-        "other": _span(passage.other_span),
+        "query": span_payload(passage.query_span),
+        "other": span_payload(passage.other_span),
         "characters": passage.characters,
         "resolved": passage.resolved,
     }

@@ -12,24 +12,18 @@ survives every renderer intact.
 
 from __future__ import annotations
 
-import re
-from dataclasses import replace
 from typing import TextIO
 
 from lexdrift.report.model import InstrumentReport, ReportedMatch
+from lexdrift.report.shared import flow, quote, trim_passages
 
 __all__ = ["to_markdown", "write_markdown"]
 
-_WHITESPACE = re.compile(r"\s+")
 _FENCE = "```"
 
 
-def _flow(text: str) -> str:
-    return _WHITESPACE.sub(" ", text).strip()
-
-
 def _escape_cell(text: str) -> str:
-    return _flow(text).replace("|", r"\|")
+    return flow(text).replace("|", r"\|")
 
 
 def _match_section(match: ReportedMatch, *, index: int) -> list[str]:
@@ -49,17 +43,17 @@ def _match_section(match: ReportedMatch, *, index: int) -> list[str]:
     if match.reasons:
         lines.append("Why this was reported:")
         lines.append("")
-        lines.extend(f"- {_flow(reason)}" for reason in match.reasons)
+        lines.extend(f"- {flow(reason)}" for reason in match.reasons)
         lines.append("")
     for position, passage in enumerate(match.passages, start=1):
         lines.append(f"**Passage {position}** ({passage.characters} characters)")
         lines.append("")
         lines.append(_FENCE)
-        lines.append(_flow(passage.query_text) or "(empty)")
+        lines.append(quote(passage.query_text, empty="(empty)"))
         lines.append(_FENCE)
         lines.append("")
         lines.append(_FENCE)
-        lines.append(_flow(passage.other_text) or "(not available)")
+        lines.append(quote(passage.other_text, empty="(not available)"))
         lines.append(_FENCE)
         lines.append("")
     return lines
@@ -72,7 +66,7 @@ def to_markdown(report: InstrumentReport, *, max_passages: int = 3) -> str:
     lines = [
         f"# Reuse report: {report.key.slug}",
         "",
-        _flow(report.title),
+        flow(report.title),
         "",
         f"Generated {report.generated_at.isoformat(timespec='seconds')}.",
         "",
@@ -93,9 +87,8 @@ def to_markdown(report: InstrumentReport, *, max_passages: int = 3) -> str:
     lines.append("## Findings")
     lines.append("")
     for index, match in enumerate(report.matches, start=1):
-        trimmed = replace(match, passages=match.passages[:max_passages])
+        trimmed, hidden = trim_passages(match, max_passages)
         lines.extend(_match_section(trimmed, index=index))
-        hidden = len(match.passages) - len(trimmed.passages)
         if hidden > 0:
             lines.append(f"_{hidden} further passages omitted._")
             lines.append("")

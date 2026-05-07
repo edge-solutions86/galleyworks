@@ -11,26 +11,21 @@ There is no colour and no box drawing. The output is read as often through
 
 from __future__ import annotations
 
-import re
 import textwrap
 
 from lexdrift.report.model import InstrumentReport, ReportedMatch, ReportedPassage
+from lexdrift.report.shared import flow, trim_passages
 
 __all__ = ["render_text"]
 
-_WHITESPACE = re.compile(r"\s+")
 _RULE = "-"
-
-
-def _flow(text: str) -> str:
-    return _WHITESPACE.sub(" ", text).strip()
 
 
 def _quote(label: str, text: str, *, width: int, indent: str = "    ") -> list[str]:
     if not text:
         return [f"{indent}{label}: (not available)"]
     body = textwrap.wrap(
-        _flow(text),
+        flow(text),
         width=max(width - len(indent) - 2, 20),
         initial_indent=f"{indent}{label}: ",
         subsequent_indent=indent + " " * (len(label) + 2),
@@ -58,9 +53,9 @@ def _match_block(match: ReportedMatch, *, width: int, limit: int) -> list[str]:
         f"{match.characters} characters over {len(match.passages)} passages",
     ]
     lines.extend(f"    why: {reason}" for reason in match.reasons)
-    for position, passage in enumerate(match.passages[:limit], start=1):
+    trimmed, hidden = trim_passages(match, limit)
+    for position, passage in enumerate(trimmed.passages, start=1):
         lines.extend(_passage_block(passage, width=width, position=position))
-    hidden = len(match.passages) - limit
     if hidden > 0:
         lines.append(f"    ... {hidden} further passages")
     return lines
@@ -103,7 +98,7 @@ def render_text(
     summary = report.summary
     lines = [
         f"lexdrift report for {report.key.slug}",
-        _flow(report.title)[:width],
+        flow(report.title)[:width],
         _RULE * min(width, 78),
         f"generated {report.generated_at.isoformat(timespec='seconds')}",
         (
