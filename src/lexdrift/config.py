@@ -109,6 +109,11 @@ class MatchConfig(_Frozen):
     """Thresholds applied after candidate generation."""
 
     min_containment: float = Field(default=0.35, ge=0.0, le=1.0)
+    # A state amends its own chapter every session, so text shared inside one
+    # jurisdiction is the normal case rather than a finding. The floor is higher
+    # there so that the same corpus can be run without drowning the cross
+    # jurisdiction results it exists to surface.
+    same_jurisdiction_containment: float = Field(default=0.6, ge=0.0, le=1.0)
     min_passage_chars: int = Field(default=90, ge=1)
     min_content_ratio: float = Field(default=0.25, ge=0.0, le=1.0)
     min_distinct_anchors: int = Field(default=2, ge=1)

@@ -5,7 +5,8 @@ index. Each stage narrows the previous one:
 
 1. the index proposes candidates that share an LSH band
 2. boilerplate fingerprints are removed from both sides
-3. the surviving sets are scored, and anything under the containment floor goes
+3. the surviving sets are scored against a containment floor that is higher
+   for two instruments from the same jurisdiction
 4. what is left is aligned into passages
 5. a passage that is too short, or that rests on too few distinct fingerprints,
    is dropped, because a score without a passage a person can check is not a
@@ -36,7 +37,7 @@ from lexdrift.match.scoring import PairScore, score_pair
 from lexdrift.models import Instrument
 from lexdrift.util.logging import get_logger
 
-__all__ = ["Matcher", "SegmentMatch", "passage_is_reportable"]
+__all__ = ["Matcher", "SegmentMatch", "containment_floor", "passage_is_reportable"]
 
 _log = get_logger("match.engine")
 
@@ -71,6 +72,20 @@ class SegmentMatch:
     @property
     def crosses_jurisdictions(self) -> bool:
         return self.query.key.jurisdiction != self.other.key.jurisdiction
+
+
+def containment_floor(query: SegmentRef, other: SegmentRef, settings: MatchConfig) -> float:
+    """The containment a pair has to clear to be reported.
+
+    Two instruments from one jurisdiction share text as a matter of routine: a
+    bill amends a chapter and re-prints the surrounding subsections. The floor
+    is raised for that case rather than the finding being dropped, because a
+    wholesale copy inside one state is still worth seeing.
+    """
+
+    if query.key.jurisdiction == other.key.jurisdiction:
+        return max(settings.min_containment, settings.same_jurisdiction_containment)
+    return settings.min_containment
 
 
 def passage_is_reportable(passage: Passage, settings: MatchConfig) -> bool:
@@ -135,7 +150,7 @@ class Matcher:
         if not other_values:
             return None
         score = score_pair(values, other_values)
-        if score.best_containment < settings.min_containment:
+        if score.best_containment < containment_floor(SegmentRef.of(record), ref, settings):
             return None
         passages = tuple(
             passage
