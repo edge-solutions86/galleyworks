@@ -24,6 +24,7 @@ PACKAGE = Path(lexdrift.__file__).resolve().parent
 
 EXPECTED_COMMANDS = {
     "check",
+    "completion",
     "config",
     "diff",
     "diffusion",
