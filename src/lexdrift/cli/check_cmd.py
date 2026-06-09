@@ -17,6 +17,7 @@ from lexdrift.cli.common import build_config, engine_options
 from lexdrift.cli.main import EXIT_FINDINGS, EXIT_OK, Runtime, cli
 from lexdrift.errors import ConfigError
 from lexdrift.index.maintenance import check_integrity, compact
+from lexdrift.index.prune import find_prunable, prune
 from lexdrift.index.store import SqliteIndex
 
 __all__ = ["check"]
@@ -25,6 +26,7 @@ __all__ = ["check"]
 @cli.command(name="check", short_help="verify and optionally repair an index")
 @engine_options(index_required=True)
 @click.option("--repair", is_flag=True, help="rebuild the derived tables and vacuum")
+@click.option("--prune", "do_prune", is_flag=True, help="also drop rows that answer nothing")
 @click.pass_obj
 def check(
     runtime: Runtime,
@@ -33,6 +35,7 @@ def check(
     profile: str | None,
     reading: str | None,
     repair: bool,
+    do_prune: bool,
 ) -> int:
     """Check the index named by ``--index``."""
 
@@ -42,7 +45,12 @@ def check(
     with SqliteIndex(index_path, config) as store:
         report = check_integrity(store)
         runtime.line(report.summary())
-        if report.is_clean and not repair:
+        prunable = find_prunable(store)
+        runtime.line(prunable.summary())
+        if do_prune and not prunable.is_clean:
+            runtime.line(f"pruned {prune(store).total} rows")
+            prunable = find_prunable(store)
+        if report.is_clean and prunable.is_clean and not repair:
             return EXIT_OK
         if not repair:
             runtime.line("run again with --repair to rebuild the derived tables")
