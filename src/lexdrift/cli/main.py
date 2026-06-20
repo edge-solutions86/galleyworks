@@ -29,7 +29,7 @@ from lexdrift import __version__
 from lexdrift.errors import LexdriftError
 from lexdrift.util.logging import configure_logging
 
-__all__ = ["Runtime", "cli", "main"]
+__all__ = ["EPILOG", "Runtime", "cli", "main"]
 
 EXIT_OK = 0
 EXIT_FINDINGS = 1
@@ -47,9 +47,17 @@ class Runtime:
         print(text, file=self.out)
 
 
+EPILOG = """A corpus is a directory of documents named <jurisdiction>_<session>_<number>.txt,
+or a manifest.yaml naming them explicitly.
+
+Exit codes: 0 nothing to flag, 1 a finding, 2 bad arguments, 3 a lexdrift error.
+"""
+
+
 @click.group(
     name="lexdrift",
     help="Passage-reuse detection for legislative instruments.",
+    epilog=EPILOG,
     invoke_without_command=True,
     context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 100},
 )
