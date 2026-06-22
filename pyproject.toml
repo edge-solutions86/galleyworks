@@ -4,17 +4,36 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lexdrift"
-version = "0.9.0"
+version = "1.0.0"
 description = "Passage-reuse and near-duplicate detection for legislative instruments"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Proprietary" }
 authors = [{ name = "rkaushik-dev", email = "anitalune373@gmail.com" }]
+keywords = [
+    "legislation",
+    "near-duplicate-detection",
+    "minhash",
+    "winnowing",
+    "text-reuse",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Legal Industry",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
+]
 dependencies = [
     "click>=8.1.7,<9",
     "pydantic>=2.10,<3",
     "PyYAML>=6.0.1,<7",
 ]
+
+[project.urls]
+Source = "https://github.com/rkaushik-dev/galleyworks"
+Issues = "https://github.com/rkaushik-dev/galleyworks/issues"
 
 [project.scripts]
 lexdrift = "lexdrift.cli.main:run"
