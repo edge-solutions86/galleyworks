@@ -21,14 +21,14 @@ from lexdrift.report.model import InstrumentReport, ReportedMatch, ReportedPassa
 
 __all__ = [
     "HealthResponse",
-    "InstrumentOut",
     "InstrumentDetail",
+    "InstrumentOut",
     "InstrumentsResponse",
-    "SegmentOut",
     "MatchOut",
     "PassageOut",
     "QueryRequest",
     "ReportOut",
+    "SegmentOut",
     "SummaryOut",
 ]
 

@@ -23,8 +23,8 @@ from lexdrift.util.spans import TextSpan
 
 __all__ = [
     "CanonPipeline",
-    "Canonicalizer",
     "CanonResult",
+    "Canonicalizer",
     "Edit",
     "Rule",
     "apply_edits",

@@ -14,6 +14,19 @@ from __future__ import annotations
 
 from typing import Any
 
+__all__ = [
+    "CanonError",
+    "ConfigError",
+    "IngestError",
+    "LexdriftError",
+    "MatchError",
+    "ParseError",
+    "StoreError",
+    "UnknownFormatError",
+    "error_code_of",
+    "http_status_of",
+]
+
 
 class LexdriftError(Exception):
     """Base class for everything this package raises deliberately."""

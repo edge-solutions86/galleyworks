@@ -18,8 +18,8 @@ from lexdrift.models import Instrument
 from lexdrift.util.logging import get_logger
 
 __all__ = [
-    "MIN_CONFIDENCE",
     "Detection",
+    "MIN_CONFIDENCE",
     "ReaderRegistry",
     "default_registry",
 ]

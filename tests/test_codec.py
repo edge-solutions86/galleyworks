@@ -77,7 +77,7 @@ def test_a_short_blob_is_rejected() -> None:
 
 def test_a_foreign_magic_is_rejected() -> None:
     blob = bytearray(encode_record(record()))
-    blob[0:4] = b"XXXX"
+    blob[0:4] = b"ZZZZ"
     with pytest.raises(StoreError, match="wrong magic"):
         decode_record(bytes(blob))
 

@@ -16,3 +16,4 @@ htmlcov/
 *.ldx
 .idea/
 .vscode/
+.hypothesis/
