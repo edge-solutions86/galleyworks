@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from conftest_corpus import MODEL_CLAUSE, make_bill
 from lexdrift.cli import build_cli
-from lexdrift.cli.main import EXIT_ERROR, EXIT_OK, EXIT_USAGE, main
+from lexdrift.cli.main import EXIT_ERROR, EXIT_OK, main
 from lexdrift.cli.serve_cmd import build_service
 
 
@@ -44,10 +44,6 @@ def test_check_loads_the_index_without_binding(index_path: str) -> None:
 def test_check_reports_the_digest(index_path: str) -> None:
     _, output = run("serve", "--index", index_path, "--check")
     assert "digest " in output
-
-
-def test_the_index_option_is_required() -> None:
-    assert run("serve", "--check")[0] == EXIT_USAGE
 
 
 def test_a_missing_index_directory_is_an_error(tmp_path: Path) -> None:

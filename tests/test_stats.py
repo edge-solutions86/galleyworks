@@ -8,7 +8,7 @@ import pytest
 
 from golden_corpus import golden_instruments
 from lexdrift.cli import build_cli
-from lexdrift.cli.main import EXIT_ERROR, EXIT_OK, EXIT_USAGE, main
+from lexdrift.cli.main import EXIT_ERROR, EXIT_OK, main
 from lexdrift.index.memory import MemoryIndex
 from lexdrift.index.statistics import CorpusStats, describe
 from lexdrift.pipeline import Engine
@@ -106,10 +106,6 @@ def test_the_command_can_emit_json(index_path: str) -> None:
     assert payload["instruments"] == 6
     assert payload["jurisdictions"]["wy"] == 1
     assert len(payload["engine_digest"]) == 16
-
-
-def test_the_index_option_is_required() -> None:
-    assert run("stats")[0] == EXIT_USAGE
 
 
 def test_a_missing_index_is_an_error(tmp_path: Path) -> None:

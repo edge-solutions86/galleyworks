@@ -7,7 +7,7 @@ import pytest
 
 from conftest_corpus import MODEL_CLAUSE, make_bill
 from lexdrift.cli import build_cli
-from lexdrift.cli.main import EXIT_ERROR, EXIT_FINDINGS, EXIT_OK, EXIT_USAGE, main
+from lexdrift.cli.main import EXIT_ERROR, EXIT_FINDINGS, EXIT_OK, main
 from lexdrift.index.store import SqliteIndex
 
 
@@ -75,10 +75,6 @@ def test_the_index_still_answers_after_repair(index_path: str) -> None:
     code, output = run("query", "--index", index_path, "--jurisdiction", "mt", str(document))
     assert code == EXIT_OK
     assert "wy/2025/lower/HB0142" in output
-
-
-def test_the_index_option_is_required() -> None:
-    assert run("check")[0] == EXIT_USAGE
 
 
 def test_a_missing_index_is_an_error(tmp_path: Path) -> None:

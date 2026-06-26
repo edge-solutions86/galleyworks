@@ -1,9 +1,21 @@
+# The development stack, pinned exactly.
+#
+# The runtime dependencies are pinned here as well as bounded in pyproject.toml.
+# Without that, CI resolves whatever is newest inside the bounds and stops
+# testing the versions anyone is actually running.
+anyio==4.8.0
+click==8.1.8
 fastapi==0.115.8
 httpx==0.28.1
 hypothesis==6.125.3
 mypy==1.15.0
+pydantic==2.10.6
+pydantic-core==2.27.2
 pytest==8.3.4
 pytest-cov==6.0.0
+PyYAML==6.0.2
 ruff==0.9.6
+starlette==0.41.3
 types-PyYAML==6.0.12.20241230
+typing-extensions==4.12.2
 uvicorn==0.34.0
