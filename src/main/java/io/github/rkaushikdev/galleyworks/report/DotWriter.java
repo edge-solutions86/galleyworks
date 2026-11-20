@@ -50,17 +50,17 @@ public final class DotWriter {
                 "  node [shape=box, fontname=\"Helvetica\", fontsize=10];",
                 "  edge [fontname=\"Helvetica\", fontsize=8];"));
         Map<String, List<InstrumentKey>> grouped = new TreeMap<>();
-        for (InstrumentKey node : graph.nodes()) {
-            grouped.computeIfAbsent(node.jurisdiction(), ignored -> new ArrayList<>())
-                    .add(node);
+        for (InstrumentKey member : graph.nodes()) {
+            grouped.computeIfAbsent(member.jurisdiction(), ignored -> new ArrayList<>())
+                    .add(member);
         }
         grouped.forEach((jurisdiction, nodes) -> {
             lines.add("  subgraph cluster_" + jurisdiction + " {");
             lines.add("    label=\"" + jurisdiction + "\";");
             lines.add("    style=dotted;");
-            for (InstrumentKey node : nodes) {
-                String suffix = graph.dateOf(node).map(when -> "\\n" + when).orElse("");
-                lines.add("    " + nodeId(node) + " [label=\"" + node.number() + suffix + "\"];");
+            for (InstrumentKey member : nodes) {
+                String suffix = graph.dateOf(member).map(when -> "\\n" + when).orElse("");
+                lines.add("    " + nodeId(member) + " [label=\"" + member.number() + suffix + "\"];");
             }
             lines.add("  }");
         });

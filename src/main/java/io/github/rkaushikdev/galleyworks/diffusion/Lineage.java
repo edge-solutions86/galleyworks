@@ -59,11 +59,11 @@ public record Lineage(
     public static List<List<InstrumentKey>> components(ReuseGraph graph) {
         Set<String> seen = new HashSet<>();
         List<List<InstrumentKey>> found = new ArrayList<>();
-        for (InstrumentKey node : graph.nodes()) {
-            if (!seen.add(node.slug())) {
+        for (InstrumentKey start : graph.nodes()) {
+            if (!seen.add(start.slug())) {
                 continue;
             }
-            Deque<InstrumentKey> stack = new ArrayDeque<>(List.of(node));
+            Deque<InstrumentKey> stack = new ArrayDeque<>(List.of(start));
             List<InstrumentKey> member = new ArrayList<>();
             while (!stack.isEmpty()) {
                 InstrumentKey current = stack.pop();

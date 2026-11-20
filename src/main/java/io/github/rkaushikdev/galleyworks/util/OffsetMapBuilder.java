@@ -14,7 +14,7 @@ public final class OffsetMapBuilder {
     private int source;
     private int target;
 
-    /** Where the next move starts in the original text. */
+    /** Where the next move starts in the source text. */
     public int sourceCursor() {
         return source;
     }

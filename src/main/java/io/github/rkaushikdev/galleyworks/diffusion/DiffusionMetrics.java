@@ -66,8 +66,8 @@ public record DiffusionMetrics(
     /** Drop directed edges that a longer directed path already implies. */
     public static ReuseGraph transitiveReduction(ReuseGraph graph) {
         ReuseGraph reduced = new ReuseGraph();
-        for (InstrumentKey node : graph.nodes()) {
-            reduced.note(node, graph.dateOf(node));
+        for (InstrumentKey member : graph.nodes()) {
+            reduced.note(member, graph.dateOf(member));
         }
         for (ReuseEdge edge : graph.edges()) {
             if (edge.directed() && reaches(graph, edge.source(), edge.target(), edge.pair())) {

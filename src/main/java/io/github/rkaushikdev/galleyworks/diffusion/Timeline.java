@@ -99,8 +99,8 @@ public final class Timeline {
     /** Every directed cycle, each reported once rotated to its lowest slug, sorted. */
     public static List<List<String>> findCycles(ReuseGraph graph) {
         Map<String, List<String>> adjacency = new HashMap<>();
-        for (InstrumentKey node : graph.nodes()) {
-            adjacency.put(node.slug(), new ArrayList<>());
+        for (InstrumentKey member : graph.nodes()) {
+            adjacency.put(member.slug(), new ArrayList<>());
         }
         for (ReuseEdge edge : graph.edges()) {
             if (edge.directed()) {
@@ -111,9 +111,9 @@ public final class Timeline {
         }
         Set<List<String>> found = new HashSet<>();
         Map<String, Integer> colour = new HashMap<>();
-        for (String node : new TreeSet<>(adjacency.keySet())) {
-            if (colour.getOrDefault(node, 0) == 0) {
-                walk(node, new ArrayList<>(), adjacency, colour, found);
+        for (String member : new TreeSet<>(adjacency.keySet())) {
+            if (colour.getOrDefault(member, 0) == 0) {
+                walk(member, new ArrayList<>(), adjacency, colour, found);
             }
         }
         List<List<String>> sorted = new ArrayList<>(found);
@@ -122,14 +122,14 @@ public final class Timeline {
     }
 
     private static void walk(
-            String node,
+            String member,
             List<String> path,
             Map<String, List<String>> adjacency,
             Map<String, Integer> colour,
             Set<List<String>> found) {
-        colour.put(node, 1);
-        path.add(node);
-        for (String next : new TreeSet<>(adjacency.getOrDefault(node, List.of()))) {
+        colour.put(member, 1);
+        path.add(member);
+        for (String next : new TreeSet<>(adjacency.getOrDefault(member, List.of()))) {
             int state = colour.getOrDefault(next, 0);
             if (state == 1) {
                 List<String> cycle = path.subList(path.indexOf(next), path.size());
@@ -143,7 +143,7 @@ public final class Timeline {
             }
         }
         path.removeLast();
-        colour.put(node, 2);
+        colour.put(member, 2);
     }
 
     private static int compareLists(List<String> left, List<String> right) {

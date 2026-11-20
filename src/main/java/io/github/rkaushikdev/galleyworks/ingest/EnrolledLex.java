@@ -113,7 +113,7 @@ public final class EnrolledLex {
     }
 
     /**
-     * Classify every line of {@code text}, keeping spans into the original.
+     * Classify every line of {@code text}, keeping spans into the unmodified text.
      *
      * <p>A parenthesised label only counts when it opens a block, that is, at the top of the
      * document or after a blank line. Enrolled text wraps at the margin, so {@code sixty\n(60)

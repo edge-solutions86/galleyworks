@@ -5,10 +5,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Translates offsets in a rewritten text back to the original.
+ * Translates offsets in a rewritten text back to the source text.
  *
  * <p>Canonicalization and amendment markup both rewrite text, and a match found in the rewritten
- * form has to be quoted from the original. The map records the piecewise correspondence so that
+ * form has to be quoted from the source text. The map records the piecewise correspondence so that
  * translation is exact where the texts line up and honest where they do not: an inserted region
  * has no source, so it maps to the seam it was inserted at. Build one with {@link
  * OffsetMapBuilder}.
@@ -48,7 +48,7 @@ public final class OffsetMap {
         return pieces;
     }
 
-    /** Length of the original text. */
+    /** Length of the source text. */
     public int sourceLength() {
         return sourceLength;
     }

@@ -2,9 +2,9 @@ package io.github.rkaushikdev.galleyworks.util;
 
 /**
  * One aligned run of an {@link OffsetMap}: {@code target} in the rewritten text corresponds to
- * {@code source} in the original.
+ * {@code source} in the source text.
  *
- * @param source the run in the original text
+ * @param source the run in the source text
  * @param target the run in the rewritten text
  */
 public record Piece(TextSpan source, TextSpan target) {
