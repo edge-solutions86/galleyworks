@@ -1,0 +1,121 @@
+plugins {
+	id 'java'
+	id 'application'
+	id 'jacoco'
+	id 'com.diffplug.spotless' version '7.0.4'
+}
+
+group = 'io.github.rkaushikdev'
+version = '1.0.0'
+description = 'Passage-reuse and near-duplicate detection for legislative instruments'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'info.picocli:picocli:4.7.7'
+	annotationProcessor 'info.picocli:picocli-codegen:4.7.7'
+	implementation 'org.yaml:snakeyaml:2.4'
+	// The index is a sqlite file: its pragmas, its user_version and its write-ahead log are
+	// part of the on-disk contract, so the store talks to sqlite itself rather than to H2.
+	implementation 'org.xerial:sqlite-jdbc:3.49.1.0'
+	implementation 'org.slf4j:slf4j-api:2.0.18'
+	implementation 'ch.qos.logback:logback-classic:1.5.34'
+
+	testImplementation platform('org.junit:junit-bom:5.12.2')
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testImplementation 'org.assertj:assertj-core:3.27.7'
+	testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.21.4'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	// Exceptions here are never serialized, so serial lint is noise; annotation processors on
+	// the classpath warn about annotations nobody claims.
+	options.compilerArgs.addAll([
+		'-Xlint:all,-serial,-processing',
+		'-Werror'
+	])
+}
+
+tasks.named('compileJava', JavaCompile) {
+	options.compilerArgs << "-Aproject=${project.group}/${project.name}"
+}
+
+application {
+	mainClass = 'io.github.rkaushikdev.galleyworks.cli.Main'
+	applicationName = 'lexdrift'
+}
+
+tasks.named('jar', Jar) {
+	manifest {
+		attributes(
+				'Implementation-Title': project.name,
+				'Implementation-Version': project.version,
+				'Main-Class': application.mainClass.get()
+				)
+	}
+}
+
+tasks.named('test', Test) {
+	useJUnitPlatform()
+	// The README, build-file and source hygiene checks read files relative to the project root.
+	workingDir = projectDir
+	maxParallelForks = 1
+	testLogging {
+		events 'failed'
+		exceptionFormat = 'full'
+	}
+	finalizedBy tasks.named('jacocoTestReport')
+}
+
+jacoco {
+	toolVersion = '0.8.13'
+}
+
+tasks.named('jacocoTestReport', JacocoReport) {
+	dependsOn tasks.named('test')
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+tasks.named('jacocoTestCoverageVerification', JacocoCoverageVerification) {
+	dependsOn tasks.named('test')
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.80
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
+spotless {
+	java {
+		target 'src/**/*.java'
+		palantirJavaFormat()
+		removeUnusedImports()
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
+	groovyGradle {
+		target '*.gradle'
+		greclipse()
+	}
+}

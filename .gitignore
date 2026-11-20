@@ -1,7 +1,20 @@
+# Java
+build/
+.gradle/
+.idea/
+*.iml
+out/
+.vscode/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.ldx
+
+# Python, until the original sources are removed
 __pycache__/
 *.py[cod]
 *.egg-info/
-build/
 dist/
 .venv/
 venv/
@@ -11,9 +24,4 @@ venv/
 .coverage
 coverage.xml
 htmlcov/
-*.sqlite
-*.sqlite-journal
-*.ldx
-.idea/
-.vscode/
 .hypothesis/
