@@ -110,6 +110,15 @@ class CliContractTest {
                 .isEqualTo(EXIT_ERROR);
     }
 
+    @Test
+    void serveSaysWhenTheServiceIsNotInstalled() {
+        String indexPath = tmp.resolve("index.sqlite").toString();
+        run("index", "--index", indexPath, tmp.toString());
+        Cli.Result result = run("serve", "--index", indexPath, "--check");
+        assertThat(result.code()).isEqualTo(EXIT_ERROR);
+        assertThat(result.errors()).startsWith("lexdrift.config: the service extra is not installed");
+    }
+
     @ParameterizedTest
     @FieldSource("RUNTIME")
     void everyRuntimeDependencyIsPinned(String name) {

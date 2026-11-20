@@ -1,1 +1,4 @@
 rootProject.name = 'galleyworks'
+
+// The HTTP service is its own project so the library and the command line carry no web stack.
+include 'service'

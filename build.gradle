@@ -1,5 +1,6 @@
 plugins {
-	id 'java'
+	id 'java-library'
+	id 'java-test-fixtures'
 	id 'application'
 	id 'jacoco'
 	id 'com.diffplug.spotless' version '7.0.4'
@@ -20,13 +21,15 @@ repositories {
 }
 
 dependencies {
-	implementation 'info.picocli:picocli:4.7.7'
+	// picocli, SnakeYAML and SLF4J types appear in public signatures (Main.commandLine,
+	// Settings.yaml, Log.get), so they are part of the API the service project compiles against.
+	api 'info.picocli:picocli:4.7.7'
 	annotationProcessor 'info.picocli:picocli-codegen:4.7.7'
-	implementation 'org.yaml:snakeyaml:2.4'
+	api 'org.yaml:snakeyaml:2.4'
 	// The index is a sqlite file: its pragmas, its user_version and its write-ahead log are
 	// part of the on-disk contract, so the store talks to sqlite itself rather than to H2.
 	implementation 'org.xerial:sqlite-jdbc:3.49.1.0'
-	implementation 'org.slf4j:slf4j-api:2.0.18'
+	api 'org.slf4j:slf4j-api:2.0.18'
 	implementation 'ch.qos.logback:logback-classic:1.5.34'
 
 	testImplementation platform('org.junit:junit-bom:5.12.2')

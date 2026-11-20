@@ -26,6 +26,7 @@ class RepoInvariantsTest {
 
     private static final Path MAIN = Path.of("src", "main", "java");
     private static final Path TEST = Path.of("src", "test", "java");
+    private static final Path FIXTURES = Path.of("src", "testFixtures", "java");
 
     // Assembled rather than written out, because this file is itself scanned.
     private static final List<String> MARKERS =
@@ -44,7 +45,9 @@ class RepoInvariantsTest {
     }
 
     static List<Path> testFiles() {
-        return javaFiles(TEST);
+        List<Path> files = new ArrayList<>(javaFiles(TEST));
+        files.addAll(javaFiles(FIXTURES));
+        return files;
     }
 
     static List<Path> allFiles() {
@@ -205,7 +208,7 @@ class RepoInvariantsTest {
     @ParameterizedTest
     @MethodSource("allFiles")
     void everyFileDeclaresThePackageOfItsDirectory(Path path) {
-        Path root = path.startsWith(MAIN) ? MAIN : TEST;
+        Path root = path.startsWith(MAIN) ? MAIN : path.startsWith(FIXTURES) ? FIXTURES : TEST;
         assertThat(declaredPackage(read(path))).as(path.toString()).contains(expectedPackage(root, path));
     }
 
@@ -224,7 +227,7 @@ class RepoInvariantsTest {
         TreeSet<String> packages = new TreeSet<>();
         sources().forEach(path -> packages.add(expectedPackage(MAIN, path)));
         TreeSet<String> tested = new TreeSet<>();
-        testFiles().stream()
+        javaFiles(TEST).stream()
                 .filter(path -> stem(path).endsWith("Test"))
                 .forEach(path -> tested.add(expectedPackage(TEST, path)));
         assertThat(tested).containsAll(packages);
