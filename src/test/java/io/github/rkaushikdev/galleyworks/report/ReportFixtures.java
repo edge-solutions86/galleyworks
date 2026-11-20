@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /** The reports the writer tests render, and a small CSV reader to check what they write. */
-final class ReportFixtures {
+public final class ReportFixtures {
 
     static final OffsetDateTime FIXED = OffsetDateTime.of(2026, 1, 2, 3, 4, 5, 0, java.time.ZoneOffset.UTC);
 
@@ -50,7 +50,7 @@ final class ReportFixtures {
     }
 
     /** Rows of {@code text} parsed as CSV with a header, by column. */
-    static List<Map<String, String>> readCsv(String text) {
+    public static List<Map<String, String>> readCsv(String text) {
         List<List<String>> records = parse(text);
         List<Map<String, String>> rows = new ArrayList<>();
         if (records.isEmpty()) {

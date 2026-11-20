@@ -10,8 +10,8 @@ import java.util.Optional;
  * The developer-facing rendering of a value, as error messages have always quoted it.
  *
  * <p>Error context renders as {@code key='value'}, so a string is quoted, a number is bare and an
- * absent value reads {@code None}. Those strings are what operators grep for in logs, so they keep
- * the shape the original engine gave them.
+ * absent value reads {@code None}. Those strings are what operators grep for in logs, so their shape
+ * is fixed.
  */
 public final class Repr {
 

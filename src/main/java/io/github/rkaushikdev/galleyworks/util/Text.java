@@ -7,7 +7,7 @@ import java.util.Locale;
 /**
  * Character classification with the semantics the engine's text rules were written against.
  *
- * <p>Whitespace here is the full Unicode set the original matched (including the information
+ * <p>Whitespace here is the full Unicode set (including the information
  * separators {@code U+001C}..{@code U+001F} and the non-breaking spaces), and a character is
  * printable unless it is a control, format, private-use, unassigned or separator character other
  * than the ASCII space.
@@ -85,6 +85,14 @@ public final class Text {
         }
         int value = Character.getNumericValue(point);
         return Character.getType(point) == Character.OTHER_NUMBER && value >= 0 && value <= 9;
+    }
+
+    /** True for a letter or any kind of number, as a single character counts as alphanumeric. */
+    public static boolean isAlnum(int point) {
+        return switch (Character.getType(point)) {
+            case Character.DECIMAL_DIGIT_NUMBER, Character.LETTER_NUMBER, Character.OTHER_NUMBER -> true;
+            default -> Character.isLetter(point);
+        };
     }
 
     /** True when {@code text} is non-empty and made only of letters. */

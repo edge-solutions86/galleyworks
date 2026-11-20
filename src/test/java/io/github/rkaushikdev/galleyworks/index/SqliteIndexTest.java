@@ -155,8 +155,7 @@ class SqliteIndexTest {
 
     @Test
     void aSignatureOfTheWrongWidthIsRejected() {
-        // The original swapped the store's configuration after opening; signing the record under a
-        // narrower banding produces the same mismatch from the other side.
+        // A record signed under a narrower banding than the store's has the wrong width.
         EngineConfig narrow = new EngineConfig().withLsh(new LshConfig(64, 16, 0x5EED));
         SegmentFingerprint bad = new Fingerprinter(narrow)
                 .fingerprint(makeBill("wy", "HB0142", MODEL_CLAUSE))

@@ -2,22 +2,59 @@ package io.github.rkaushikdev.galleyworks.util;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Formatting and rounding of doubles with the exact results the original engine printed.
+ * Formatting, rounding and parsing of doubles with the exact results the report formats pin.
  *
  * <p>Reports, the engine digest and the JSON formats are compared byte for byte, so a score has
- * to print the same digits it always has. {@link String#format} rounds half-up from the shortest
- * decimal representation; the original rounded half-even from the exact binary value, and prints
- * the shortest round-tripping representation with its own rules for when to switch to an
- * exponent. Both are reproduced here.
+ * to print the same digits on every run. {@link String#format} rounds half-up from the shortest
+ * decimal representation; these round half-even from the exact binary value, and print the
+ * shortest round-tripping representation with fixed rules for when to switch to an exponent.
  */
 public final class Floats {
 
     private static final int REPR_LOW_EXPONENT = -4;
     private static final int REPR_HIGH_EXPONENT = 16;
 
+    private static final String DIGITS = "[0-9](?:_?[0-9])*";
+    private static final Pattern NUMBER = Pattern.compile(
+            "[+-]?(?:" + DIGITS + "(?:\\.(?:" + DIGITS + ")?)?|\\." + DIGITS + ")(?:[eE][+-]?" + DIGITS + ")?");
+    private static final Pattern SPECIAL = Pattern.compile("([+-]?)(inf|infinity|nan)", Pattern.CASE_INSENSITIVE);
+
     private Floats() {}
+
+    /**
+     * Read {@code text} as a float the way the command line accepts one: surrounding whitespace
+     * is ignored, any decimal digit counts, single underscores may separate digits, and {@code inf},
+     * {@code infinity} and {@code nan} are accepted in any case.
+     *
+     * @throws NumberFormatException when {@code text} is not a float
+     */
+    public static double parse(String text) {
+        StringBuilder ascii = new StringBuilder();
+        Text.strip(text).codePoints().forEach(point -> {
+            if (Character.isDigit(point)) {
+                ascii.append((char) ('0' + Character.digit(point, 10)));
+            } else {
+                ascii.appendCodePoint(point);
+            }
+        });
+        String cleaned = ascii.toString();
+        Matcher special = SPECIAL.matcher(cleaned);
+        if (special.matches()) {
+            boolean negative = special.group(1).equals("-");
+            if (Text.lower(special.group(2)).equals("nan")) {
+                return Double.NaN;
+            }
+            return negative ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+        }
+        if (!NUMBER.matcher(cleaned).matches()) {
+            throw new NumberFormatException("could not convert string to float: " + Repr.quote(text));
+        }
+        return Double.parseDouble(cleaned.replace("_", ""));
+    }
 
     /** {@code value} with exactly {@code places} decimals, rounded half-even from its exact value. */
     public static String fixed(double value, int places) {
@@ -50,8 +87,8 @@ public final class Floats {
     }
 
     /**
-     * The shortest representation that reads back as {@code value}, written the way the original
-     * printed floats: {@code 1.0}, {@code 0.0001}, {@code 1e-05}, {@code 1e+16}.
+     * The shortest representation that reads back as {@code value}, written the way the reports
+     * print floats: {@code 1.0}, {@code 0.0001}, {@code 1e-05}, {@code 1e+16}.
      */
     public static String repr(double value) {
         if (Double.isNaN(value)) {

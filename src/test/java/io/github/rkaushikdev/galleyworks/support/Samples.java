@@ -8,13 +8,12 @@ import java.util.stream.Stream;
 /**
  * Seeded example generators for the property tests.
  *
- * <p>The original suite drew 50 examples per property ({@code max_examples=50}). These draw the
- * same number from a fixed seed, always including the edge values a shrinker would reach, so a
- * failure reproduces on every run.
+ * <p>Each property draws 50 examples from a fixed seed, always including the edge values a
+ * shrinker would reach, so a failure reproduces on every run.
  */
 public final class Samples {
 
-    /** Examples per property, as the original profile ran. */
+    /** Examples per property. */
     public static final int EXAMPLES = 50;
 
     private Samples() {}

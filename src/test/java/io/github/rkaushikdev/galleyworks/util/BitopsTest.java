@@ -37,7 +37,7 @@ class BitopsTest {
     void popcountMasksTo64Bits() {
         assertThat(Bitops.popcount(0)).isZero();
         assertThat(Bitops.popcount(MASK64)).isEqualTo(64);
-        // A long has no 65th bit, so the original's (1 << 70) has nothing to add.
+        // A long has no 65th bit, so a bit above the 64th has nothing to add.
         assertThat(Bitops.popcount(MASK64 | Long.MIN_VALUE)).isEqualTo(64);
     }
 

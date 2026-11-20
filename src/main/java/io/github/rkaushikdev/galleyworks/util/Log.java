@@ -127,7 +127,7 @@ public final class Log {
         return (Logger) LoggerFactory.getLogger(ROOT);
     }
 
-    /** The level name the original engine printed for a Logback level. */
+    /** The level name the log lines print for a Logback level. */
     static String levelName(Level level) {
         return switch (level.toInt()) {
             case Level.WARN_INT -> "WARNING";

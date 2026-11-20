@@ -22,8 +22,8 @@ class ConfigTest {
 
     @Test
     void configIsFrozen() throws NoSuchFieldException {
-        // A Java record cannot be assigned to; what the original checked at runtime the compiler
-        // enforces, so the test checks that the configuration types are records of final fields.
+        // A record cannot be assigned to, so the compiler enforces immutability and the test
+        // checks that the configuration types are records of final fields.
         assertThat(ShingleConfig.class.isRecord()).isTrue();
         Field width = ShingleConfig.class.getDeclaredField("width");
         assertThat(Modifier.isFinal(width.getModifiers())).isTrue();
