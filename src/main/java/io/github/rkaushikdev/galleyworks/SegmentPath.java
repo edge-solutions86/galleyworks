@@ -1,5 +1,6 @@
 package io.github.rkaushikdev.galleyworks;
 
+import io.github.rkaushikdev.galleyworks.util.Text;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public record SegmentPath(List<String> labels) implements Comparable<SegmentPath
 
     /** This path extended by one label, which must not be blank. */
     public SegmentPath child(String label) {
-        String cleaned = label.strip();
+        String cleaned = Text.strip(label);
         if (cleaned.isEmpty()) {
             throw new IngestError("segment label is empty", Context.of("path", dotted()));
         }

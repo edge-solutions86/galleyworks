@@ -53,6 +53,14 @@ public final class Hashing {
         return value;
     }
 
+    /** The unkeyed BLAKE2b digest of {@code data}, {@code length} bytes long (1 to 64). */
+    public static byte[] blake2b(byte[] data, int length) {
+        if (length < 1 || length > 64) {
+            throw new IllegalArgumentException("BLAKE2b digests are 1 to 64 bytes, not " + length);
+        }
+        return Blake2b.digest(data, length);
+    }
+
     /** A stable 64-bit digest of one canonical token. */
     public static long hashToken(String token) {
         return hashBytes(token.getBytes(StandardCharsets.UTF_8));

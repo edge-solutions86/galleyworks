@@ -1,5 +1,7 @@
 package io.github.rkaushikdev.galleyworks;
 
+import io.github.rkaushikdev.galleyworks.util.Regex;
+import io.github.rkaushikdev.galleyworks.util.Text;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -20,7 +22,7 @@ import java.util.regex.Pattern;
 public record Jurisdiction(String slug, String name, GovernmentLevel level, Optional<String> parent)
         implements Comparable<Jurisdiction> {
 
-    static final Pattern SLUG = Pattern.compile("^[a-z0-9][a-z0-9-]{0,31}$");
+    static final Pattern SLUG = Regex.compile("^[a-z0-9][a-z0-9-]{0,31}$");
 
     private static final Comparator<Jurisdiction> ORDER = Comparator.comparing(Jurisdiction::slug)
             .thenComparing(Jurisdiction::name)
@@ -29,13 +31,13 @@ public record Jurisdiction(String slug, String name, GovernmentLevel level, Opti
 
     /** Validates the slug, the name and the parent link. */
     public Jurisdiction {
-        if (!SLUG.matcher(slug).matches()) {
+        if (!SLUG.matcher(slug).lookingAt()) {
             throw new ConfigError("jurisdiction slug is not a valid identifier", Context.of("slug", slug));
         }
-        if (name.isBlank()) {
+        if (Text.strip(name).isEmpty()) {
             throw new ConfigError("jurisdiction name is empty", Context.of("slug", slug));
         }
-        if (parent.isPresent() && !SLUG.matcher(parent.get()).matches()) {
+        if (parent.isPresent() && !SLUG.matcher(parent.get()).lookingAt()) {
             throw new ConfigError("jurisdiction parent is not a valid identifier", Context.of("parent", parent.get()));
         }
         if (parent.isPresent() && parent.get().equals(slug)) {

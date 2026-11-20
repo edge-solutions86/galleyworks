@@ -72,7 +72,7 @@ public final class SimHash {
             double weight = 1.0;
             if (corpusSize > 0) {
                 int seenIn = documentFrequency.getOrDefault(token, 0);
-                weight = Math.log((double) (corpusSize + 1) / (seenIn + 1)) + 1.0;
+                weight = StrictMath.log((double) (corpusSize + 1) / (seenIn + 1)) + 1.0;
             }
             features.add(new Feature(Hashing.hashToken(token), weight));
         }

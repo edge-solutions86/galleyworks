@@ -94,19 +94,19 @@ public final class EnrolledLex {
     }
 
     private static LineKind classifyLabel(String label) {
-        if (DIGITS.matcher(label).matches()) {
+        if (DIGITS.matcher(label).lookingAt()) {
             return LineKind.ITEM;
         }
-        if (UPPER_ALPHA.matcher(label).matches()) {
+        if (UPPER_ALPHA.matcher(label).lookingAt()) {
             return LineKind.SUBPARAGRAPH;
         }
-        if (!LOWER_ALPHA.matcher(label).matches()) {
+        if (!LOWER_ALPHA.matcher(label).lookingAt()) {
             return LineKind.TEXT;
         }
         if (AMBIGUOUS_LABELS.contains(label)) {
             return LineKind.AMBIGUOUS_LABEL;
         }
-        if (ROMAN_ONLY.matcher(label).matches()) {
+        if (ROMAN_ONLY.matcher(label).lookingAt()) {
             return LineKind.PARAGRAPH;
         }
         return LineKind.SUBSECTION;

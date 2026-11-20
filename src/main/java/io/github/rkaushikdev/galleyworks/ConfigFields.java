@@ -1,10 +1,10 @@
 package io.github.rkaushikdev.galleyworks;
 
+import io.github.rkaushikdev.galleyworks.util.Text;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -109,7 +109,7 @@ final class ConfigFields {
         }
         if (value instanceof String text) {
             try {
-                return Double.parseDouble(text.strip());
+                return Double.parseDouble(Text.strip(text));
             } catch (NumberFormatException exc) {
                 problem(key, "Input should be a valid number, unable to parse string as a number");
                 return fallback;
@@ -131,7 +131,7 @@ final class ConfigFields {
             return number.doubleValue() == 1.0;
         }
         if (value instanceof String text) {
-            String lowered = text.strip().toLowerCase(Locale.ROOT);
+            String lowered = Text.lower(Text.strip(text));
             if (TRUE.contains(lowered)) {
                 return true;
             }
@@ -201,7 +201,7 @@ final class ConfigFields {
             case Double number -> whole(number);
             case Float number -> whole(number.doubleValue());
             case BigDecimal number -> whole(number.doubleValue());
-            case String text -> parse(text.strip());
+            case String text -> parse(Text.strip(text));
             case null, default -> Optional.empty();
         };
     }

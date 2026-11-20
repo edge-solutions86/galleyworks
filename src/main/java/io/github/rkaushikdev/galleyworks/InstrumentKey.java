@@ -1,5 +1,6 @@
 package io.github.rkaushikdev.galleyworks;
 
+import io.github.rkaushikdev.galleyworks.util.Regex;
 import java.util.Comparator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,7 +20,7 @@ import java.util.regex.Pattern;
 public record InstrumentKey(String jurisdiction, String session, Chamber chamber, String number)
         implements Comparable<InstrumentKey> {
 
-    private static final Pattern KEY = Pattern.compile("^(?<jurisdiction>[a-z0-9][a-z0-9-]{0,31})"
+    private static final Pattern KEY = Regex.compile("^(?<jurisdiction>[a-z0-9][a-z0-9-]{0,31})"
             + "/(?<session>[a-z0-9][a-z0-9-]{0,31})"
             + "/(?<chamber>[a-z]+)"
             + "/(?<number>[A-Za-z0-9._-]{1,32})$");
@@ -31,10 +32,10 @@ public record InstrumentKey(String jurisdiction, String session, Chamber chamber
 
     /** Validates each field. */
     public InstrumentKey {
-        if (!Jurisdiction.SLUG.matcher(jurisdiction).matches()) {
+        if (!Jurisdiction.SLUG.matcher(jurisdiction).lookingAt()) {
             throw new ConfigError("instrument jurisdiction is malformed", Context.of("value", jurisdiction));
         }
-        if (!Jurisdiction.SLUG.matcher(session).matches()) {
+        if (!Jurisdiction.SLUG.matcher(session).lookingAt()) {
             throw new ConfigError("instrument session is malformed", Context.of("value", session));
         }
         if (number.isEmpty() || number.length() > 32) {
@@ -50,7 +51,7 @@ public record InstrumentKey(String jurisdiction, String session, Chamber chamber
     /** Read a key back from its slug. */
     public static InstrumentKey parse(String slug) {
         Matcher match = KEY.matcher(slug);
-        if (!match.matches()) {
+        if (!match.lookingAt()) {
             throw new ConfigError("instrument key does not parse", Context.of("slug", slug));
         }
         Chamber chamber;

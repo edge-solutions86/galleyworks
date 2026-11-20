@@ -50,6 +50,11 @@ public record Instrument(
         return new Builder(key, title, rawText);
     }
 
+    /** The same instrument with different raw text; the segments are kept. */
+    public Instrument withRawText(String replacement) {
+        return new Instrument(key, title, replacement, segments, introducedOn, enactedOn, sourceFormat);
+    }
+
     /** The date the corpus should sort this instrument by: enactment, else introduction. */
     public Optional<LocalDate> effectiveDate() {
         return enactedOn.or(() -> introducedOn);

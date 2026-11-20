@@ -40,7 +40,7 @@ public record LshConfig(int permutations, int bands, long seed) {
 
     /** The Jaccard similarity at which this banding is half likely to fire. */
     public double approximateThreshold() {
-        return Math.pow(1.0 / bands, 1.0 / rows());
+        return StrictMath.pow(1.0 / bands, 1.0 / rows());
     }
 
     /** This configuration with permutations replaced. */
