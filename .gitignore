@@ -1,27 +1,16 @@
-# Java
+# Gradle and the JVM
 build/
 .gradle/
+out/
+
+# Editors
 .idea/
 *.iml
-out/
 .vscode/
+
+# Index files and their write-ahead logs, written by local runs
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
 *.sqlite-journal
 *.ldx
-
-# Python, until the original sources are removed
-__pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-.venv/
-venv/
-.mypy_cache/
-.ruff_cache/
-.pytest_cache/
-.coverage
-coverage.xml
-htmlcov/
-.hypothesis/
