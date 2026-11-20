@@ -30,16 +30,6 @@ public final class Lexdrift {
         return Corpus.discover(root);
     }
 
-    /** A corpus read from a YAML manifest. */
-    public static Corpus loadManifest(Path manifest) {
-        return Corpus.loadManifest(manifest);
-    }
-
-    /** The configuration a YAML file and the environment describe. */
-    public static EngineConfig loadConfig(Path path) {
-        return Settings.loadConfig(path);
-    }
-
     /** The stable code for {@code error}. */
     public static String errorCodeOf(Throwable error) {
         return LexdriftError.errorCodeOf(error);
@@ -48,5 +38,20 @@ public final class Lexdrift {
     /** The HTTP status {@code error} means. */
     public static int httpStatusOf(Throwable error) {
         return LexdriftError.httpStatusOf(error);
+    }
+
+    /** The configuration the defaults and the environment describe. */
+    public static EngineConfig loadConfig() {
+        return Settings.loadConfig();
+    }
+
+    /** The configuration a YAML file and the environment describe. */
+    public static EngineConfig loadConfig(Path path) {
+        return Settings.loadConfig(path);
+    }
+
+    /** A corpus read from a YAML manifest. */
+    public static Corpus loadManifest(Path manifest) {
+        return Corpus.loadManifest(manifest);
     }
 }
