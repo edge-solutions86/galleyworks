@@ -26,7 +26,7 @@ and a tool that treats it as redrafting reports a copied clause as original.
 3. **Fingerprint.** Winnowed w-shingles, a MinHash signature over an affine
    permutation family, and a stopword-weighted SimHash.
 4. **Index.** LSH banding over the signature, plus an inverted index of the
-   winnowed fingerprints, held in memory or in sqlite.
+   winnowed fingerprints, held in memory or in a sqlite file.
 5. **Match.** Candidates from the banding, then containment scoring, then
    anchor chaining into passages with character spans on both sides.
 6. **Report.** Text, JSON, CSV or markdown, each finding with the evidence and
@@ -34,14 +34,24 @@ and a tool that treats it as redrafting reports a copied clause as original.
 7. **Diffusion.** A dated graph over instruments: which families exist, which
    member printed the text first, and how far it travelled.
 
-## Install
+## Build
+
+Java 21 and the Gradle wrapper in this repository:
 
 ```
-pip install .            # the engine and the CLI
-pip install '.[service]' # and the HTTP service
+./gradlew build                 # compile, format check, tests, coverage
+./gradlew installDist           # the command line in build/install/lexdrift
+./gradlew :service:bootJar      # the HTTP service in service/build/libs
 ```
 
-Python 3.12 or newer.
+The repository holds two Gradle projects. The root project is the engine and
+the `lexdrift` command line, with no web stack. `service/` is the read-only HTTP
+service on Spring Boot; its jar runs the same command line, with `lexdrift
+serve` able to start the server:
+
+```
+java -jar service/build/libs/lexdrift-service-*.jar serve --index corpus.sqlite
+```
 
 ## Use it from the command line
 
@@ -65,17 +75,45 @@ Exit codes are part of the contract: `0` nothing to flag, `1` a finding, `2` bad
 arguments, `3` a lexdrift error with its stable code on stderr. `query
 --fail-over 0.4` is therefore a gate in a drafting pipeline.
 
+`--log-level` (debug, info, warning, error) and `--log-format` (plain, json)
+come before the command and decide what is written to stderr.
+
 ## Use it as a library
 
-```python
-from lexdrift import Engine, EngineConfig, discover
+```java
+import io.github.rkaushikdev.galleyworks.Engine;
+import io.github.rkaushikdev.galleyworks.EngineConfig;
+import io.github.rkaushikdev.galleyworks.Lexdrift;
+import io.github.rkaushikdev.galleyworks.RunResult;
+import io.github.rkaushikdev.galleyworks.report.InstrumentReport;
+import java.nio.file.Path;
 
-engine = Engine(EngineConfig())
-result = engine.run(discover("bills/"))
-for report in result.reports:
-    if not report.is_empty:
-        print(report.key.slug, report.summary.reuse_ratio)
+Engine engine = new Engine(new EngineConfig());
+RunResult result = engine.run(Lexdrift.discover(Path.of("bills")));
+for (InstrumentReport report : result.reports()) {
+    if (!report.isEmpty()) {
+        System.out.println(report.key().slug() + " " + report.summary().reuseRatio());
+    }
+}
 ```
+
+`Lexdrift.discover`, `Lexdrift.loadManifest` and `Lexdrift.loadConfig` are the
+entry points; every type a caller needs lives in the root package
+`io.github.rkaushikdev.galleyworks`, apart from the report the engine returns.
+
+## The HTTP service
+
+| route | answers |
+| --- | --- |
+| `GET /health` | status, version, engine digest, instrument and segment counts |
+| `GET /v1/instruments` | one page of the indexed corpus (`limit`, `offset`, `jurisdiction`) |
+| `GET /v1/instruments/{jurisdiction}/{session}/{chamber}/{number}` | every indexed segment of one instrument |
+| `POST /v1/query` | what a document reuses, without indexing it |
+
+Bodies are JSON with snake_case fields. The API document is served at
+`/openapi.json` and browsable at `/docs`. Set `LEXDRIFT_API_TOKEN` to require
+`Authorization: Bearer <token>` on everything except `/health` and the
+documentation. Every response carries `x-request-id` and `x-response-time-ms`.
 
 ## Configuration
 
@@ -129,3 +167,10 @@ It finds text reuse. It does not find two people independently drafting the same
 rule in different words, and it does not decide whether reuse is copying,
 compliance or a shared model. Direction comes from enactment dates and nothing
 else; where the dates do not settle it, the edge is reported as undirected.
+
+## Source and licence
+
+Source: https://github.com/rkaushik-dev/galleyworks. Report problems at
+https://github.com/rkaushik-dev/galleyworks/issues.
+
+Licence: proprietary.

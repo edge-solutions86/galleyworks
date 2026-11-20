@@ -63,6 +63,8 @@ tasks.named('jar', Jar) {
 		attributes(
 				'Implementation-Title': project.name,
 				'Implementation-Version': project.version,
+				'Implementation-Vendor': 'rkaushik-dev',
+				'Implementation-URL': 'https://github.com/rkaushik-dev/galleyworks',
 				'Main-Class': application.mainClass.get()
 				)
 	}
