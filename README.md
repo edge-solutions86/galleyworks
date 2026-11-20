@@ -1,5 +1,10 @@
 # lexdrift
 
+[![CI](https://github.com/rkaushik-dev/galleyworks/actions/workflows/ci.yml/badge.svg)](https://github.com/rkaushik-dev/galleyworks/actions/workflows/ci.yml)
+![Java 21](https://img.shields.io/badge/Java-21-007396)
+![Gradle](https://img.shields.io/badge/build-Gradle-02303A)
+![JUnit 5](https://img.shields.io/badge/tests-JUnit%205-25A162)
+
 Passage-reuse and near-duplicate detection for legislative instruments.
 
 Given a bill, an ordinance or a session law, lexdrift finds the passages that
