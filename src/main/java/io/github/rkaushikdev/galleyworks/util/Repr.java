@@ -3,6 +3,7 @@ package io.github.rkaushikdev.galleyworks.util;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -47,7 +48,7 @@ public final class Repr {
                     if (point == quote) {
                         out.append('\\').append((char) point);
                     } else if (point < 0x20 || point == 0x7f) {
-                        out.append(String.format("\\x%02x", point));
+                        out.append(String.format(Locale.ROOT, "\\x%02x", point));
                     } else {
                         out.appendCodePoint(point);
                     }

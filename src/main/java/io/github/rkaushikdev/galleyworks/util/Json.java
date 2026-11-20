@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -208,7 +209,7 @@ public final class Json {
                 case '\f' -> out.append("\\f");
                 default -> {
                     if (c < 0x20 || (ensureAscii && c > 0x7e)) {
-                        out.append(String.format("\\u%04x", (int) c));
+                        out.append(String.format(Locale.ROOT, "\\u%04x", (int) c));
                     } else {
                         out.append(c);
                     }

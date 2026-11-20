@@ -3,6 +3,7 @@ package io.github.rkaushikdev.galleyworks.fingerprint;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Deterministic 64-bit hashing.
@@ -102,6 +103,6 @@ public final class Hashing {
 
     /** {@code value} as 16 lowercase hex digits. */
     public static String hex(long value) {
-        return String.format("%016x", value);
+        return String.format(Locale.ROOT, "%016x", value);
     }
 }

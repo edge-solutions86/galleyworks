@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Locale;
 
 /**
  * ISO 8601 timestamps written the way the reports have always written them: an explicit {@code
@@ -25,7 +26,7 @@ public final class Timestamps {
     /** {@code 2025-07-01T12:30:00+00:00}, with {@code .ffffff} when the time has microseconds. */
     public static String isoformat(OffsetDateTime when) {
         int micros = when.getNano() / 1000;
-        String fraction = micros == 0 ? "" : String.format(".%06d", micros);
+        String fraction = micros == 0 ? "" : String.format(Locale.ROOT, ".%06d", micros);
         return SECONDS.format(when) + fraction + OFFSET.format(when);
     }
 
