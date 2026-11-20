@@ -1,35 +1,38 @@
 package io.github.rkaushikdev.galleyworks.service;
 
-import static io.github.rkaushikdev.galleyworks.support.GoldenCorpus.goldenInstruments;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.github.rkaushikdev.galleyworks.Engine;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.web.servlet.MockMvc;
 
+@WebMvcTest
+@Import(GoldenService.class)
 class ServiceDetailTest {
 
     private static final String WYOMING = "/v1/instruments/wy/2023/lower/HB0142";
 
-    private static TestClient client;
+    @Autowired
+    private MockMvc mvc;
 
-    @BeforeAll
-    static void client() {
-        Engine engine = new Engine();
-        goldenInstruments().forEach(engine::add);
-        client = TestClient.of(LexdriftService.create(engine, TokenPolicy.open()));
+    @Autowired
+    private ApplicationContext context;
+
+    private Http client;
+
+    @BeforeEach
+    void client() {
+        client = new Http(mvc);
     }
 
-    @AfterAll
-    static void stop() {
-        client.close();
-    }
-
-    private static List<JsonNode> segments() {
+    private List<JsonNode> segments() {
         List<JsonNode> found = new ArrayList<>();
         client.get(WYOMING).json().get("segments").forEach(found::add);
         return found;
@@ -67,7 +70,7 @@ class ServiceDetailTest {
 
     @Test
     void anUnknownInstrumentIsA404() {
-        TestClient.Answer response = client.get("/v1/instruments/wy/2023/lower/HB9999");
+        Http.Answer response = client.get("/v1/instruments/wy/2023/lower/HB9999");
         assertThat(response.status()).isEqualTo(404);
         assertThat(response.json().get("detail").asText()).isEqualTo("no such instrument");
     }
@@ -84,11 +87,13 @@ class ServiceDetailTest {
 
     @Test
     void theRouteIsDocumented() {
-        assertThat(client.get("/openapi.json")
-                        .json()
-                        .get("paths")
-                        .has("/v1/instruments/{jurisdiction}/{session}/{chamber}/{number}"))
-                .isTrue();
+        try (TestClient app = TestClient.of(LexdriftService.create(GoldenService.engine(), TokenPolicy.open()))) {
+            assertThat(app.get("/openapi.json")
+                            .json()
+                            .get("paths")
+                            .has("/v1/instruments/{jurisdiction}/{session}/{chamber}/{number}"))
+                    .isTrue();
+        }
     }
 
     @Test

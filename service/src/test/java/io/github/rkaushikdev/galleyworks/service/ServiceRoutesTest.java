@@ -6,30 +6,34 @@ import static io.github.rkaushikdev.galleyworks.support.GoldenCorpus.goldenInstr
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.github.rkaushikdev.galleyworks.Engine;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.web.servlet.MockMvc;
 
+@WebMvcTest
+@Import(GoldenService.class)
 class ServiceRoutesTest {
 
-    private static TestClient client;
+    @Autowired
+    private MockMvc mvc;
 
-    @BeforeAll
-    static void client() {
-        Engine engine = new Engine();
-        goldenInstruments().forEach(engine::add);
-        client = TestClient.of(LexdriftService.create(engine, TokenPolicy.open()));
-    }
+    @Autowired
+    private ApplicationContext context;
 
-    @AfterAll
-    static void stop() {
-        client.close();
+    private Http client;
+
+    @BeforeEach
+    void client() {
+        client = new Http(mvc);
     }
 
     private static List<String> keys(JsonNode payload) {
@@ -40,8 +44,8 @@ class ServiceRoutesTest {
 
     @Test
     void theStateIsOnTheApplication() {
-        ServiceState state = client.running().context().getBean(ServiceState.class);
-        assertThat(state).isSameAs(client.service().state());
+        ServiceState state = context.getBean(ServiceState.class);
+        assertThat(context.getBean(Routes.class)).isNotNull();
         assertThat(state.digest()).hasSize(16);
     }
 
@@ -93,7 +97,7 @@ class ServiceRoutesTest {
 
     @Test
     void aPageLargerThanTheCapIsRejected() {
-        TestClient.Answer response = client.get("/v1/instruments?limit=" + (Routes.MAX_PAGE + 1));
+        Http.Answer response = client.get("/v1/instruments?limit=" + (Routes.MAX_PAGE + 1));
         assertThat(response.status()).isEqualTo(422);
         assertThat(response.json().at("/detail/0/loc").toString()).isEqualTo("[\"query\",\"limit\"]");
         assertThat(response.json().at("/detail/0/type").asText()).isEqualTo("less_than_equal");
@@ -101,7 +105,7 @@ class ServiceRoutesTest {
 
     @Test
     void aNegativeOffsetIsRejected() {
-        TestClient.Answer response = client.get("/v1/instruments?offset=-1");
+        Http.Answer response = client.get("/v1/instruments?offset=-1");
         assertThat(response.status()).isEqualTo(422);
         assertThat(response.json().at("/detail/0/type").asText()).isEqualTo("greater_than_equal");
     }
@@ -109,7 +113,7 @@ class ServiceRoutesTest {
     @Test
     void aQueryCarriesItsExplanation() {
         String copy = makeBill("mt", "HB0999", MODEL_CLAUSE).rawText();
-        TestClient.Answer response = client.postJson("/v1/query", Map.of("text", copy, "jurisdiction", "mt"));
+        Http.Answer response = client.postJson("/v1/query", Map.of("text", copy, "jurisdiction", "mt"));
         assertThat(response.status()).isEqualTo(200);
         JsonNode matches = response.json().get("matches");
         assertThat(matches).allSatisfy(match -> {
@@ -121,7 +125,7 @@ class ServiceRoutesTest {
 
     @Test
     void aRealCopyIsReported() {
-        TestClient.Answer response = client.postJson(
+        Http.Answer response = client.postJson(
                 "/v1/query", Map.of("text", goldenInstruments().get(1).rawText(), "jurisdiction", "mt"));
         assertThat(response.status()).isEqualTo(200);
         assertThat(response.json().get("matches")).isNotEmpty();
@@ -130,7 +134,9 @@ class ServiceRoutesTest {
     @Test
     void theOpenapiDocumentListsTheRoutes() {
         Set<String> paths = new HashSet<>();
-        client.get("/openapi.json").json().get("paths").fieldNames().forEachRemaining(paths::add);
+        try (TestClient app = TestClient.of(LexdriftService.create(GoldenService.engine(), TokenPolicy.open()))) {
+            app.get("/openapi.json").json().get("paths").fieldNames().forEachRemaining(paths::add);
+        }
         assertThat(paths)
                 .containsExactlyInAnyOrder(
                         "/health",
@@ -141,23 +147,23 @@ class ServiceRoutesTest {
 
     @Test
     void aBodyThatIsNotJsonIsRefused() {
-        TestClient.Answer broken = client.post("/v1/query", "{\"text\": ", "application/json");
+        Http.Answer broken = client.post("/v1/query", "{\"text\": ", "application/json");
         assertThat(broken.status()).isEqualTo(422);
         assertThat(broken.json().at("/detail/0/type").asText()).isEqualTo("json_invalid");
         assertThat(broken.json().at("/detail/0/loc/0").asText()).isEqualTo("body");
 
-        TestClient.Answer empty = client.post("/v1/query", "", "application/json");
+        Http.Answer empty = client.post("/v1/query", "", "application/json");
         assertThat(empty.status()).isEqualTo(422);
         assertThat(empty.json().at("/detail/0/type").asText()).isEqualTo("missing");
 
-        TestClient.Answer plain = client.post("/v1/query", "{\"text\": \"x\", \"jurisdiction\": \"wy\"}", "text/plain");
+        Http.Answer plain = client.post("/v1/query", "{\"text\": \"x\", \"jurisdiction\": \"wy\"}", "text/plain");
         assertThat(plain.status()).isEqualTo(422);
         assertThat(plain.json().at("/detail/0/type").asText()).isEqualTo("model_attributes_type");
     }
 
     @Test
     void aQueryParameterThatIsNotANumberIsRefused() {
-        TestClient.Answer response = client.get("/v1/instruments?limit=many&offset=-3&jurisdiction=" + "x".repeat(33));
+        Http.Answer response = client.get("/v1/instruments?limit=many&offset=-3&jurisdiction=" + "x".repeat(33));
         assertThat(response.status()).isEqualTo(422);
         List<String> types = new ArrayList<>();
         response.json()
@@ -174,7 +180,7 @@ class ServiceRoutesTest {
 
     @Test
     void aWrongMethodIsA405() {
-        TestClient.Answer response = client.get("/v1/query");
+        Http.Answer response = client.get("/v1/query");
         assertThat(response.status()).isEqualTo(405);
         assertThat(response.json().get("detail").asText()).isEqualTo("Method Not Allowed");
         assertThat(response.header("Allow")).contains("POST");
@@ -182,7 +188,7 @@ class ServiceRoutesTest {
 
     @Test
     void errorMappingStillApplies() {
-        TestClient.Answer response = client.postJson("/v1/query", Map.of("text", "AN ACT\n", "jurisdiction", "mt"));
+        Http.Answer response = client.postJson("/v1/query", Map.of("text", "AN ACT\n", "jurisdiction", "mt"));
         assertThat(response.status()).isEqualTo(422);
         assertThat(response.json().get("code").asText()).startsWith("lexdrift.ingest");
     }

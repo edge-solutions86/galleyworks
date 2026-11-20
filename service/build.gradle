@@ -3,6 +3,7 @@ plugins {
 	id 'jacoco'
 	id 'com.diffplug.spotless'
 	id 'org.springframework.boot' version '3.5.16'
+	id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = rootProject.group
@@ -20,7 +21,6 @@ repositories {
 }
 
 dependencies {
-	implementation platform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
 	implementation project(':')
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
@@ -52,6 +52,9 @@ tasks.named('bootJar') {
 tasks.named('test', Test) {
 	useJUnitPlatform()
 	maxParallelForks = 1
+	// The WebMvc slices load Mockito, whose agent appends to the boot class path; without
+	// class-data sharing the JVM has nothing to warn about.
+	jvmArgs '-Xshare:off'
 	testLogging {
 		events 'failed'
 		exceptionFormat = 'full'

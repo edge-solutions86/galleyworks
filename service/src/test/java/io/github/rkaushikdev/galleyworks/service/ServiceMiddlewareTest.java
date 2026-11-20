@@ -7,28 +7,33 @@ import io.github.rkaushikdev.galleyworks.Engine;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.web.servlet.MockMvc;
 
+@WebMvcTest
+@Import(GoldenService.class)
 class ServiceMiddlewareTest {
 
-    private static TestClient client;
+    @Autowired
+    private MockMvc mvc;
 
-    @BeforeAll
-    static void client() {
-        Engine engine = new Engine();
-        goldenInstruments().forEach(engine::add);
-        client = TestClient.of(LexdriftService.create(engine, TokenPolicy.open()));
+    @Autowired
+    private ApplicationContext context;
+
+    private Http client;
+
+    @BeforeEach
+    void client() {
+        client = new Http(mvc);
     }
 
-    @AfterAll
-    static void stop() {
-        client.close();
-    }
-
-    private static double duration(TestClient.Answer response) {
+    private static double duration(Http.Answer response) {
         return Double.parseDouble(response.header(TimingFilter.DURATION_HEADER).orElseThrow());
     }
 
@@ -43,10 +48,7 @@ class ServiceMiddlewareTest {
 
     @Test
     void theMiddlewareIsInstalled() {
-        assertThat(client.running()
-                        .context()
-                        .getBeansOfType(FilterRegistrationBean.class)
-                        .values())
+        assertThat(context.getBeansOfType(FilterRegistrationBean.class).values())
                 .anyMatch(registration -> registration.getFilter() instanceof TimingFilter);
     }
 
@@ -79,7 +81,7 @@ class ServiceMiddlewareTest {
 
     @Test
     void aQueryIsTimed() {
-        TestClient.Answer response = client.postJson(
+        Http.Answer response = client.postJson(
                 "/v1/query", Map.of("text", goldenInstruments().get(1).rawText(), "jurisdiction", "mt"));
         assertThat(response.status()).isEqualTo(200);
         assertThat(duration(response)).isPositive();
@@ -87,14 +89,14 @@ class ServiceMiddlewareTest {
 
     @Test
     void anErrorResponseIsStillTimed() {
-        TestClient.Answer response = client.postJson("/v1/query", Map.of("text", "AN ACT\n", "jurisdiction", "mt"));
+        Http.Answer response = client.postJson("/v1/query", Map.of("text", "AN ACT\n", "jurisdiction", "mt"));
         assertThat(response.status()).isEqualTo(422);
         assertThat(response.header(TimingFilter.DURATION_HEADER)).isPresent();
     }
 
     @Test
     void aMissingRouteIsStillTimed() {
-        TestClient.Answer response = client.get("/nowhere");
+        Http.Answer response = client.get("/nowhere");
         assertThat(response.status()).isEqualTo(404);
         assertThat(response.header(TimingFilter.REQUEST_ID_HEADER)).isPresent();
         assertThat(response.json().get("detail").asText()).isEqualTo("Not Found");
