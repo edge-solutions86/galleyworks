@@ -16,9 +16,17 @@ import io.github.rkaushikdev.galleyworks.ShingleConfig;
 import io.github.rkaushikdev.galleyworks.StoreError;
 import io.github.rkaushikdev.galleyworks.fingerprint.Fingerprinter;
 import io.github.rkaushikdev.galleyworks.fingerprint.SegmentFingerprint;
+import io.github.rkaushikdev.galleyworks.match.Matcher;
+import io.github.rkaushikdev.galleyworks.match.SegmentMatch;
+import io.github.rkaushikdev.galleyworks.support.GoldenCorpus;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -171,5 +179,77 @@ class SqliteIndexTest {
         List<SegmentFingerprint> all = new ArrayList<>();
         store.forEach(all::add);
         assertThat(all).hasSize(store.size());
+    }
+
+    // The fixture is an index file of the golden corpus written under schema version 4, with its
+    // write-ahead log checkpointed. The on-disk format is unchanged, so such a file opens, holds
+    // exactly the rows a fresh index of the same corpus holds, and answers the same queries.
+
+    private static final List<String> TABLES = List.of(
+            "SELECT name, value FROM meta ORDER BY name",
+            "SELECT slug, jurisdiction, session, chamber, number, title, enacted_on FROM instrument ORDER BY slug",
+            "SELECT slug, segment_index, path, token_count, simhash, blob FROM segment ORDER BY slug, segment_index",
+            "SELECT band_key, slug, segment_index FROM band ORDER BY band_key, slug, segment_index",
+            "SELECT value, slug, segment_index FROM posting ORDER BY value, slug, segment_index");
+
+    private Path existingIndex() throws IOException {
+        Path copy = tmp.resolve("existing.sqlite");
+        try (InputStream fixture = getClass().getResourceAsStream("/index/golden-schema-4.db")) {
+            assertThat(fixture).as("index fixture").isNotNull();
+            Files.copy(fixture, copy);
+        }
+        return copy;
+    }
+
+    private void indexGoldenCorpus(SqliteIndex target) {
+        Fingerprinter fingerprinter = new Fingerprinter();
+        target.bulk(() -> {
+            for (Instrument instrument : GoldenCorpus.goldenInstruments()) {
+                target.register(instrument);
+                fingerprinter.fingerprint(instrument).forEach(target::add);
+            }
+        });
+    }
+
+    private static List<String> dump(SqliteIndex index, String query) {
+        List<String> rows = new ArrayList<>();
+        for (Map<String, Object> row : Sql.rows(index.connection(), query)) {
+            List<String> cells = new ArrayList<>();
+            row.values()
+                    .forEach(cell -> cells.add(
+                            cell instanceof byte[] bytes ? HexFormat.of().formatHex(bytes) : String.valueOf(cell)));
+            rows.add(String.join("|", cells));
+        }
+        return rows;
+    }
+
+    @Test
+    void anExistingIndexFileHoldsTheRowsAFreshIndexWrites() throws IOException {
+        indexGoldenCorpus(store);
+        try (SqliteIndex existing = new SqliteIndex(existingIndex())) {
+            assertThat(existing.stats()).isEqualTo(store.stats());
+            assertThat(existing.size()).isEqualTo(26);
+            for (String query : TABLES) {
+                List<String> rows = dump(existing, query);
+                assertThat(rows).as(query).isNotEmpty().isEqualTo(dump(store, query));
+            }
+            Sql.execute(existing.connection(), "DELETE FROM posting WHERE rowid = (SELECT MIN(rowid) FROM posting)");
+            assertThat(dump(existing, TABLES.getLast()))
+                    .as("a planted difference")
+                    .isNotEqualTo(dump(store, TABLES.getLast()));
+        }
+    }
+
+    @Test
+    void anExistingIndexFileAnswersQueriesAsAFreshIndexDoes() throws IOException {
+        indexGoldenCorpus(store);
+        Instrument montana = GoldenCorpus.goldenInstruments().get(1);
+        try (SqliteIndex existing = new SqliteIndex(existingIndex())) {
+            List<SegmentMatch> fromExisting = new Matcher(existing).matchInstrument(montana);
+            List<SegmentMatch> fromFresh = new Matcher(store).matchInstrument(montana);
+            assertThat(fromExisting).isNotEmpty().isEqualTo(fromFresh);
+            assertThat(existing.record(fromExisting.getFirst().other()))
+                    .isEqualTo(store.record(fromFresh.getFirst().other()));
+        }
     }
 }
