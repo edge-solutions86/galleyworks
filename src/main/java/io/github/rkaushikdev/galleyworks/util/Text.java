@@ -115,6 +115,15 @@ public final class Text {
         return text.substring(start, end);
     }
 
+    /** {@code text} with trailing whitespace removed. */
+    public static String rstrip(String text) {
+        int end = text.length();
+        while (end > 0 && isSpace(text.charAt(end - 1))) {
+            end--;
+        }
+        return text.substring(0, end);
+    }
+
     /** The whitespace-separated words of {@code text}, with no empty strings. */
     public static List<String> words(String text) {
         List<String> words = new ArrayList<>();

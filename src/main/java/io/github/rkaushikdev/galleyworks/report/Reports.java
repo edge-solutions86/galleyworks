@@ -1,0 +1,100 @@
+package io.github.rkaushikdev.galleyworks.report;
+
+import io.github.rkaushikdev.galleyworks.Instrument;
+import io.github.rkaushikdev.galleyworks.MatchConfig;
+import io.github.rkaushikdev.galleyworks.match.Explanation;
+import io.github.rkaushikdev.galleyworks.match.Passage;
+import io.github.rkaushikdev.galleyworks.match.SegmentMatch;
+import io.github.rkaushikdev.galleyworks.util.Spans;
+import io.github.rkaushikdev.galleyworks.util.TextSpan;
+import io.github.rkaushikdev.galleyworks.util.Timestamps;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+/**
+ * Resolving the engine's matches into a readable report.
+ *
+ * <p>A match holds references and spans; a report resolves them into quoted text on both sides,
+ * because a reuse finding that cannot be checked against the words is a number nobody should act
+ * on. When the other document cannot be found the passage is still reported, with an empty
+ * quotation and {@code resolved} false, so a missing corpus file shows up as a gap rather than as a
+ * silently shorter report.
+ */
+public final class Reports {
+
+    private Reports() {}
+
+    /** A report built now, quoting other instruments from {@code source}, under default thresholds. */
+    public static InstrumentReport buildReport(
+            Instrument instrument, Iterable<SegmentMatch> matches, TextSource source) {
+        return buildReport(instrument, matches, source, Timestamps.nowUtc(), new MatchConfig());
+    }
+
+    /** A report stamped {@code now}, quoting other instruments from {@code source}. */
+    public static InstrumentReport buildReport(
+            Instrument instrument, Iterable<SegmentMatch> matches, TextSource source, OffsetDateTime now) {
+        return buildReport(instrument, matches, source, now, new MatchConfig());
+    }
+
+    /** Resolve {@code matches} into a readable report about {@code instrument}. */
+    public static InstrumentReport buildReport(
+            Instrument instrument,
+            Iterable<SegmentMatch> matches,
+            TextSource source,
+            OffsetDateTime now,
+            MatchConfig matchConfig) {
+        List<ReportedMatch> reported = new ArrayList<>();
+        List<TextSpan> covered = new ArrayList<>();
+        Set<String> matchedPaths = new HashSet<>();
+        for (SegmentMatch match : matches) {
+            Optional<String> otherText = source.textOf(match.other().key());
+            List<ReportedPassage> passages = new ArrayList<>();
+            for (Passage passage : match.passages()) {
+                passages.add(new ReportedPassage(
+                        passage.query(),
+                        passage.other(),
+                        passage.query().sliceOf(instrument.rawText()),
+                        otherText.map(text -> passage.other().sliceOf(text)).orElse(""),
+                        otherText.isPresent()));
+                covered.add(passage.query());
+            }
+            matchedPaths.add(match.queryPath());
+            Explanation reasoning = Explanation.explain(match, matchConfig);
+            reported.add(new ReportedMatch(
+                    match.queryPath(),
+                    match.other().key(),
+                    match.otherPath(),
+                    match.score().queryContainment(),
+                    match.score().jaccard(),
+                    passages,
+                    reasoning.confidence(),
+                    reasoning.headline(),
+                    reasoning.reasons()));
+        }
+        Set<String> others = new HashSet<>();
+        reported.forEach(match -> others.add(match.otherKey().slug()));
+        ReportSummary summary = new ReportSummary(
+                matchedPaths.size(),
+                instrument.bodySegments().size(),
+                Spans.coverage(covered),
+                instrument.rawText().length(),
+                others.size());
+        return new InstrumentReport(instrument.key(), instrument.title(), now, summary, reported);
+    }
+
+    /** A report's findings grouped by the instrument they point at, in first-seen order. */
+    public static Map<String, List<ReportedMatch>> groupByInstrument(InstrumentReport report) {
+        Map<String, List<ReportedMatch>> grouped = new LinkedHashMap<>();
+        for (ReportedMatch match : report.matches()) {
+            grouped.computeIfAbsent(match.otherKey().slug(), ignored -> new ArrayList<>())
+                    .add(match);
+        }
+        return grouped;
+    }
+}
