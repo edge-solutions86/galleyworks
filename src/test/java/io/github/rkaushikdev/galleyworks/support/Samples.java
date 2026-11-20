@@ -59,11 +59,16 @@ public final class Samples {
 
     /** Text drawn from {@code alphabet}, up to {@code maxSize} characters, the empty one first. */
     public static Stream<String> text(String property, String alphabet, int maxSize) {
+        return text(property, alphabet, maxSize, EXAMPLES);
+    }
+
+    /** {@code examples} texts drawn from {@code alphabet}, up to {@code maxSize} characters. */
+    public static Stream<String> text(String property, String alphabet, int maxSize, int examples) {
         SplittableRandom random = random(property);
         List<String> values = new ArrayList<>();
         values.add("");
         int[] points = alphabet.codePoints().toArray();
-        while (values.size() < EXAMPLES) {
+        while (values.size() < examples) {
             int length = random.nextInt(maxSize + 1);
             StringBuilder out = new StringBuilder();
             for (int i = 0; i < length; i++) {
