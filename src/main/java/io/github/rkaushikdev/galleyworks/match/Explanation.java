@@ -1,0 +1,101 @@
+package io.github.rkaushikdev.galleyworks.match;
+
+import io.github.rkaushikdev.galleyworks.MatchConfig;
+import io.github.rkaushikdev.galleyworks.util.Floats;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * Why one match was reported, in words.
+ *
+ * <p>A containment of 0.62 is not an argument. What persuades a reader is the shape of the
+ * evidence: how many separate passages, how long the longest one is, whether they run in the same
+ * order in both documents, and whether the instruments come from different jurisdictions. The
+ * explanation is derived, never stored, from the same configuration the matcher ran under.
+ *
+ * @param confidence how strong the evidence is
+ * @param headline the one-line verdict
+ * @param reasons the observations behind it, in order
+ */
+public record Explanation(Confidence confidence, String headline, List<String> reasons) {
+
+    private static final double WHOLESALE = 0.85;
+    private static final double SUBSTANTIAL = 0.5;
+
+    /** Copies the reasons. */
+    public Explanation {
+        reasons = List.copyOf(reasons);
+    }
+
+    /** True for strong evidence. */
+    public boolean isStrong() {
+        return confidence == Confidence.STRONG;
+    }
+
+    /** Describe the evidence behind {@code match} under the default thresholds. */
+    public static Explanation explain(SegmentMatch match) {
+        return explain(match, new MatchConfig());
+    }
+
+    /** Describe the evidence behind {@code match} under {@code settings}. */
+    public static Explanation explain(SegmentMatch match, MatchConfig settings) {
+        double containment = match.score().bestContainment();
+        int longest = match.longestPassage();
+        List<String> reasons = new ArrayList<>();
+        reasons.add(Floats.percent(containment, 0) + " of the smaller fingerprint set is shared");
+        reasons.add("the longest shared passage runs " + longest + " characters");
+        int score = 0;
+        if (containment >= WHOLESALE) {
+            score += 2;
+        } else if (containment >= Math.max(settings.minContainment(), SUBSTANTIAL)) {
+            score += 1;
+        }
+        if (longest >= settings.minPassageChars() * 4) {
+            score += 2;
+            reasons.add("that passage is several times the reporting floor");
+        } else if (longest >= settings.minPassageChars() * 2) {
+            score += 1;
+        }
+        if (match.passageCount() >= 3) {
+            score += 1;
+            reasons.add("the text matches in " + match.passageCount() + " separate places");
+        }
+        if (orderedAlike(match)) {
+            if (match.passageCount() >= 2) {
+                reasons.add("the passages appear in the same order in both documents");
+            }
+        } else {
+            score -= 1;
+            reasons.add("the passages appear in a different order, which weakens the case");
+        }
+        if (match.crossesJurisdictions()) {
+            reasons.add("the two instruments are from different jurisdictions ("
+                    + match.query().key().jurisdiction()
+                    + " and "
+                    + match.other().key().jurisdiction()
+                    + ")");
+        } else {
+            reasons.add("both instruments are from the same jurisdiction, where reuse is routine");
+            score -= 1;
+        }
+        Confidence confidence = score >= 4 ? Confidence.STRONG : score >= 2 ? Confidence.MODERATE : Confidence.WEAK;
+        String headline = confidence.value() + " evidence that " + match.queryPath() + " reuses "
+                + match.other().key().slug() + " " + match.otherPath();
+        return new Explanation(confidence, headline, reasons);
+    }
+
+    /** True when the passages appear in the same order in both documents. */
+    private static boolean orderedAlike(SegmentMatch match) {
+        if (match.passages().size() < 2) {
+            return true;
+        }
+        List<Passage> byQuery = new ArrayList<>(match.passages());
+        byQuery.sort(Comparator.comparingInt(passage -> passage.query().start()));
+        List<Integer> starts =
+                byQuery.stream().map(passage -> passage.other().start()).toList();
+        List<Integer> sorted = new ArrayList<>(starts);
+        sorted.sort(null);
+        return starts.equals(sorted);
+    }
+}
